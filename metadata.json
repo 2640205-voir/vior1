@@ -1,0 +1,8 @@
+{
+  "name": "Remix MOON MISSION",
+  "description": "Realistic 3D NASA-inspired Space Shuttle simulation from Earth launch to outer space flight and lunar landing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

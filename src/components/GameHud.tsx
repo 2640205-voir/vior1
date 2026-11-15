@@ -1,0 +1,575 @@
+import { computeTaskProgress } from '../game/rules';
+import {
+  NEEDED_RESOURCES,
+  PLANET_CATALOG,
+  ROVER_CATALOG,
+  SUIT_CATALOG,
+  WEATHER_TYPES,
+  type HudSnapshot,
+  type Inventory,
+} from '../game/types';
+
+interface GameHudProps {
+  hud: HudSnapshot;
+  inv: Inventory;
+  toast: string | null;
+  hudHidden: boolean;
+  muted?: boolean;
+  onToggleHud: () => void;
+  onToggleMute?: () => void;
+  onPause?: () => void;
+  onBeginLanding: () => void;
+  onScan: () => void;
+  onOpenCraft: () => void;
+  onOpenUpgrade: () => void;
+  onToggleView: () => void;
+  onUseOxygen: () => void;
+  onUseRepair: () => void;
+  onDeployBunker: () => void;
+  onDeployBeacon: () => void;
+  onJump: () => void;
+  onToggleMoonGravity: () => void;
+}
+
+export function GameHud({
+  hud,
+  inv,
+  toast,
+  hudHidden,
+  muted = false,
+  onToggleHud,
+  onToggleMute,
+  onPause,
+  onBeginLanding,
+  onScan,
+  onOpenCraft,
+  onOpenUpgrade,
+  onToggleView,
+  onUseOxygen,
+  onUseRepair,
+  onDeployBunker,
+  onDeployBeacon,
+  onJump,
+  onToggleMoonGravity,
+}: GameHudProps) {
+  const planet =
+    PLANET_CATALOG.find((p) => p.id === hud.planetId) ?? PLANET_CATALOG[0];
+  const suit = SUIT_CATALOG.find((s) => s.id === hud.suitId) ?? SUIT_CATALOG[0];
+  const rover =
+    ROVER_CATALOG.find((r) => r.id === hud.roverId) ?? ROVER_CATALOG[0];
+  const weather = WEATHER_TYPES[hud.weatherIndex] ?? WEATHER_TYPES[0];
+  const tasks = computeTaskProgress(inv, hud.complete);
+  const landed = hud.phase === 'playing' || hud.phase === 'gameover';
+
+  const canUseO2 = landed && inv.oxygenKits > 0 && hud.oxygen < 99.9;
+  const canUseRepair = landed && inv.repairKits > 0 && hud.roverBattery < 99.9;
+  const canBuildBunker = landed && inv.bunkerKits > 0;
+  const canDeployBeacon = landed && inv.beaconKits > 0 && !hud.complete;
+
+  const panelStyle = {
+    backgroundColor: 'rgba(6, 15, 29, 0.88)',
+    border: '1px solid rgba(92, 214, 248, 0.28)',
+    boxShadow: '0 8px 26px rgba(0, 0, 0, 0.52)',
+  };
+
+  return (
+    <div className="fixed inset-0 z-10 pointer-events-none">
+      {/* Compact Top Telemetry Bar */}
+      <header className="absolute top-3.5 left-2.5 right-2.5 sm:left-4 sm:right-4 flex items-center justify-between gap-1.5 sm:gap-4">
+        <div
+          className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3.5 py-1.5 rounded-lg min-w-0"
+          style={panelStyle}
+        >
+          <div className="font-display font-bold tracking-[0.12em] sm:tracking-[0.18em] text-cyan-300 text-xs sm:text-sm md:text-base whitespace-nowrap">
+            GALAXY COMMAND
+          </div>
+          <span className="hidden sm:inline text-xs text-slate-400">·</span>
+          <span className="hidden sm:inline text-xs tracking-wider text-slate-200 whitespace-nowrap">
+            {planet.name} ({hud.planetGravityG.toFixed(2)}g · {hud.effectiveGravityMps2.toFixed(2)} m/s²{hud.moonGravity ? ' · MOON GRAVITY' : ''}) · {hud.subPhase}
+          </span>
+        </div>
+
+        <div
+          className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-[11px] tracking-wide text-cyan-100 whitespace-nowrap"
+          style={panelStyle}
+        >
+          <span>WEATHER: {weather.name}</span>
+          <span className="text-slate-500">·</span>
+          <span className="font-mono-num">VISIBILITY {weather.visibility}%</span>
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
+          <span
+            className="hidden lg:inline px-3 py-1.5 rounded-lg text-xs text-slate-200 whitespace-nowrap"
+            style={panelStyle}
+          >
+            CDR. ALEX VEGA
+          </span>
+          {onToggleMute && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.currentTarget.blur();
+                onToggleMute();
+              }}
+              className="hidden sm:inline-block px-2.5 py-1.5 rounded-lg text-[11px] font-semibold tracking-wider text-cyan-200 hover:text-white transition-colors cursor-pointer whitespace-nowrap"
+              style={panelStyle}
+            >
+              {muted ? 'MUTED' : 'AUDIO'}
+            </button>
+          )}
+          {onPause && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.currentTarget.blur();
+                onPause();
+              }}
+              className="px-2 sm:px-2.5 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold tracking-wider text-cyan-200 hover:text-white transition-colors cursor-pointer whitespace-nowrap"
+              style={panelStyle}
+            >
+              PAUSE
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onToggleHud();
+            }}
+            className="px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold tracking-wider text-cyan-200 hover:text-white transition-colors cursor-pointer whitespace-nowrap"
+            style={panelStyle}
+          >
+            <span className="sm:hidden">{hudHidden ? 'SHOW HUD' : 'HIDE HUD'}</span>
+            <span className="hidden sm:inline">{hudHidden ? 'SHOW HUD [H]' : 'HIDE HUD [H]'}</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          role="status"
+          className="absolute top-16 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-xs font-medium text-cyan-50 z-30 whitespace-nowrap"
+          style={{
+            backgroundColor: 'rgba(8, 39, 60, 0.95)',
+            border: '1px solid rgba(107, 234, 255, 0.65)',
+          }}
+        >
+          {toast}
+        </div>
+      )}
+
+      {/* Left & Right Corner Clusters (hidden in Cinema Mode) */}
+      {!hudHidden && (
+        <>
+          <aside
+            aria-label="Mission Objectives"
+            className="hidden sm:block pointer-events-auto absolute top-16 left-4 w-64 rounded-xl p-3.5"
+            style={panelStyle}
+          >
+            <h2 className="font-display text-[11px] font-bold tracking-[0.16em] text-cyan-300 mb-2">
+              MISSION OBJECTIVES
+            </h2>
+            <ul className="space-y-1.5 text-[11px]">
+              <li
+                className={`flex items-center gap-2 pb-1.5 border-b border-white/10 ${
+                  tasks.iceDone ? 'line-through text-emerald-300/75' : 'text-slate-200'
+                }`}
+              >
+                <span className="font-bold text-emerald-300">
+                  {tasks.iceDone ? '✓' : '○'}
+                </span>
+                <span>Collect 3 Water Ice samples</span>
+              </li>
+              <li
+                className={`flex items-center gap-2 pb-1.5 border-b border-white/10 ${
+                  tasks.ironDone ? 'line-through text-emerald-300/75' : 'text-slate-200'
+                }`}
+              >
+                <span className="font-bold text-emerald-300">
+                  {tasks.ironDone ? '✓' : '○'}
+                </span>
+                <span>Collect 4 Iron Ore pieces</span>
+              </li>
+              <li
+                className={`flex items-center gap-2 pb-1.5 border-b border-white/10 ${
+                  tasks.siliconDone ? 'line-through text-emerald-300/75' : 'text-slate-200'
+                }`}
+              >
+                <span className="font-bold text-emerald-300">
+                  {tasks.siliconDone ? '✓' : '○'}
+                </span>
+                <span>Collect 2 Silicon crystals</span>
+              </li>
+              <li
+                className={`flex items-center gap-2 pb-1.5 border-b border-white/10 ${
+                  tasks.beaconDone ? 'line-through text-emerald-300/75' : 'text-slate-200'
+                }`}
+              >
+                <span className="font-bold text-emerald-300">
+                  {tasks.beaconDone ? '✓' : '○'}
+                </span>
+                <span>Deploy Research Beacon</span>
+              </li>
+            </ul>
+
+            <div className="mt-3">
+              <div className="flex justify-between items-center text-[11px] mb-1">
+                <span className={hud.oxygen <= 0 ? 'text-rose-300 font-bold' : 'text-slate-300'}>
+                  {hud.oxygen <= 0 && !hud.failed
+                    ? `HYPOXIA · ${Math.ceil(hud.hypoxiaTimer)}s`
+                    : 'Suit Oxygen [Q]'}
+                </span>
+                <span
+                  className={`font-mono-num font-bold ${
+                    hud.oxygen <= 0 ? 'text-rose-300' : 'text-white'
+                  }`}
+                >
+                  {Math.ceil(hud.oxygen)}%
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                <div
+                  className="h-full transition-all duration-150"
+                  style={{
+                    width: `${hud.oxygen}%`,
+                    background:
+                      hud.oxygen < 25
+                        ? 'linear-gradient(90deg, #b91c1c, #f87171)'
+                        : 'linear-gradient(90deg, #0284c7, #38bdf8)',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-2.5 space-y-1 text-[11px] text-slate-300">
+              <div className="flex justify-between">
+                <span>Active Suit</span>
+                <span className="font-semibold text-white">{suit.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Active Rover</span>
+                <span className="font-semibold text-white">{rover.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Built Bunkers</span>
+                <span className="font-mono-num font-bold text-white">
+                  {hud.bunkerCount}
+                </span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-white/10">
+                <span>Progress</span>
+                <span className="font-mono-num font-bold text-cyan-300">
+                  {tasks.completedCount} / 4 tasks
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={!canDeployBeacon}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                onDeployBeacon();
+              }}
+              className="mt-3 w-full py-2 px-3 rounded-lg font-display text-[11px] font-bold tracking-wider bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors cursor-pointer whitespace-nowrap"
+            >
+              DEPLOY RESEARCH BEACON
+            </button>
+          </aside>
+
+          <aside
+            aria-label="Resource Inventory"
+            className="hidden sm:block pointer-events-auto absolute top-16 right-4 w-64 max-h-[calc(100vh-150px)] overflow-y-auto hud-scroll rounded-xl p-3.5"
+            style={panelStyle}
+          >
+            <h2 className="font-display text-[11px] font-bold tracking-[0.16em] text-cyan-300 mb-2">
+              RESOURCE INVENTORY
+            </h2>
+            <div className="space-y-1 text-[11px]">
+              <div className="flex justify-between py-1 border-b border-white/10 text-slate-300">
+                <span>Water Ice</span>
+                <span className="font-mono-num font-bold text-cyan-200">
+                  {inv.ice} / {NEEDED_RESOURCES.ice}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10 text-slate-300">
+                <span>Iron Ore</span>
+                <span className="font-mono-num font-bold text-amber-200">
+                  {inv.iron} / {NEEDED_RESOURCES.iron}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10 text-slate-300">
+                <span>Silicon</span>
+                <span className="font-mono-num font-bold text-violet-200">
+                  {inv.silicon} / {NEEDED_RESOURCES.silicon}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10 text-slate-300">
+                <span>Energy Cells</span>
+                <span className="font-mono-num font-bold text-white">
+                  {inv.energy}
+                </span>
+              </div>
+            </div>
+
+            <h3 className="font-display text-[10px] font-bold tracking-[0.14em] text-slate-300 mt-3 mb-1.5">
+              FIELD EQUIPMENT
+            </h3>
+            <div className="space-y-1.5 text-[11px]">
+              <div className="flex items-center justify-between gap-2 py-0.5 text-slate-300">
+                <span>O2 Canisters</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono-num font-bold text-white">
+                    {inv.oxygenKits}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!canUseO2}
+                    onClick={(e) => {
+                      e.currentTarget.blur();
+                      onUseOxygen();
+                    }}
+                    className="px-2 py-0.5 rounded text-[9px] font-bold bg-sky-700 hover:bg-sky-600 disabled:opacity-40 disabled:cursor-not-allowed text-white cursor-pointer whitespace-nowrap"
+                  >
+                    REFILL [Q]
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 py-0.5 text-slate-300">
+                <span>Repair Kits</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono-num font-bold text-white">
+                    {inv.repairKits}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!canUseRepair}
+                    onClick={(e) => {
+                      e.currentTarget.blur();
+                      onUseRepair();
+                    }}
+                    className="px-2 py-0.5 rounded text-[9px] font-bold bg-sky-700 hover:bg-sky-600 disabled:opacity-40 disabled:cursor-not-allowed text-white cursor-pointer whitespace-nowrap"
+                  >
+                    USE [F]
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 py-0.5 text-slate-300">
+                <span>Bunker Kits</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono-num font-bold text-white">
+                    {inv.bunkerKits}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!canBuildBunker}
+                    onClick={(e) => {
+                      e.currentTarget.blur();
+                      onDeployBunker();
+                    }}
+                    className="px-2 py-0.5 rounded text-[9px] font-bold bg-teal-700 hover:bg-teal-600 disabled:opacity-40 disabled:cursor-not-allowed text-white cursor-pointer whitespace-nowrap"
+                  >
+                    BUILD [B]
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 py-0.5 text-slate-300">
+                <span>Beacon Kits</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono-num font-bold text-white">
+                    {inv.beaconKits}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!canDeployBeacon}
+                    onClick={(e) => {
+                      e.currentTarget.blur();
+                      onDeployBeacon();
+                    }}
+                    className="px-2 py-0.5 rounded text-[9px] font-bold bg-teal-700 hover:bg-teal-600 disabled:opacity-40 disabled:cursor-not-allowed text-white cursor-pointer whitespace-nowrap"
+                  >
+                    DEPLOY
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 pt-2 border-t border-white/10 space-y-1 text-[11px] text-slate-300">
+              <div className="flex justify-between">
+                <span>Scanner</span>
+                <span className="font-bold text-cyan-200">
+                  {hud.scannerTimer > 0 ? 'SCANNING' : 'READY'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Rover</span>
+                <span className="font-bold text-white">{hud.roverStateLabel}</span>
+              </div>
+            </div>
+          </aside>
+        </>
+      )}
+
+      {/* Rover Telemetry Card when Driving */}
+      {hud.driving && !hudHidden && (
+        <aside
+          aria-label="Rover Telemetry"
+          className="pointer-events-auto absolute top-[90px] right-2.5 sm:top-auto sm:bottom-20 sm:right-4 w-48 sm:w-56 rounded-xl p-3"
+          style={panelStyle}
+        >
+          <h2 className="font-display text-[11px] font-bold tracking-[0.16em] text-cyan-300 mb-1.5">
+            ROVER TELEMETRY
+          </h2>
+          <div className="space-y-1 text-[11px] text-slate-300">
+            <div className="flex justify-between">
+              <span>Speed</span>
+              <span className="font-mono-num font-bold text-white">
+                {hud.roverSpeedKmh} km/h
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Battery</span>
+              <span className="font-mono-num font-bold text-white">
+                {Math.ceil(hud.roverBattery)}%
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Traction</span>
+              <span className="font-bold text-cyan-200">{weather.impact}</span>
+            </div>
+            <div className="text-[10px] text-slate-400 pt-1">
+              WASD Drive · R Exit · E Mine · F Repair
+            </div>
+          </div>
+        </aside>
+      )}
+
+      {/* Orbit Landing Trigger */}
+      {hud.phase === 'orbit' && hud.subPhase === 'ORBIT' && (
+        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 pointer-events-auto">
+          <button
+            type="button"
+            data-start="true"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onBeginLanding();
+            }}
+            className="font-display px-6 py-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm tracking-wider shadow-lg transition-colors cursor-pointer whitespace-nowrap"
+          >
+            BEGIN LANDING
+          </button>
+        </div>
+      )}
+
+      {/* Center Action Prompt */}
+      {!hudHidden && (
+        <div
+          className="absolute bottom-[84px] sm:bottom-16 left-1/2 -translate-x-1/2 px-3 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs text-cyan-50 text-center max-w-[94vw] sm:max-w-[90vw] whitespace-nowrap overflow-hidden text-ellipsis"
+          style={panelStyle}
+        >
+          {hud.prompt}
+        </div>
+      )}
+
+      {/* Unified Bottom Action Dock */}
+      <div className="absolute bottom-2.5 sm:bottom-3.5 left-1/2 -translate-x-1/2 flex flex-wrap sm:flex-nowrap items-center justify-center gap-1.5 sm:gap-2 pointer-events-auto w-[96vw] sm:w-auto max-w-[96vw]">
+        <span
+          className="hidden lg:inline px-3 py-2 rounded-lg text-[11px] text-slate-200 whitespace-nowrap"
+          style={panelStyle}
+        >
+          WASD Move · SPACE Jump · E Mine · R Rover
+        </span>
+        {hud.phase === 'playing' && (
+          <button
+            type="button"
+            data-testid="survival-jump-btn"
+            disabled={hud.driving}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onJump();
+            }}
+            className={`hidden sm:inline-block px-3.5 py-2 rounded-lg text-xs font-display font-bold tracking-wider transition-colors cursor-pointer whitespace-nowrap disabled:opacity-45 disabled:cursor-not-allowed ${
+              hud.isAirborne
+                ? 'bg-cyan-400 text-slate-950 border border-cyan-200'
+                : 'bg-cyan-600 hover:bg-cyan-500 text-white border border-cyan-300/70'
+            }`}
+          >
+            {hud.isAirborne ? 'AIRBORNE' : 'JUMP [SPACE]'}
+          </button>
+        )}
+        {hud.phase === 'playing' && (
+          <button
+            type="button"
+            data-testid="moon-gravity-btn"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onToggleMoonGravity();
+            }}
+            className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold tracking-wide transition-colors cursor-pointer whitespace-nowrap ${
+              hud.moonGravity
+                ? 'text-amber-200 border border-amber-400/60 bg-amber-950/65 hover:border-amber-300'
+                : 'text-cyan-50 hover:border-cyan-300'
+            }`}
+            style={hud.moonGravity ? undefined : panelStyle}
+          >
+            <span className="sm:hidden">
+              {hud.moonGravity ? 'MOON 0.16g' : `${planet.gravityG.toFixed(2)}g`}
+            </span>
+            <span className="hidden sm:inline">
+              MOON GRAVITY: {hud.moonGravity ? 'ON (0.16g)' : `OFF (${planet.gravityG.toFixed(2)}g)`}
+            </span>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.currentTarget.blur();
+            onScan();
+          }}
+          className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold tracking-wide text-cyan-50 hover:border-cyan-300 transition-colors cursor-pointer whitespace-nowrap"
+          style={panelStyle}
+        >
+          SCAN AREA
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.currentTarget.blur();
+            onOpenCraft();
+          }}
+          className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold tracking-wide text-cyan-50 hover:border-cyan-300 transition-colors cursor-pointer whitespace-nowrap"
+          style={panelStyle}
+        >
+          CRAFTING [C]
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.currentTarget.blur();
+            onOpenUpgrade();
+          }}
+          className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold tracking-wide text-cyan-50 hover:border-cyan-300 transition-colors cursor-pointer whitespace-nowrap"
+          style={panelStyle}
+        >
+          PLANETS & GEAR [U]
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.currentTarget.blur();
+            onToggleView();
+          }}
+          className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold tracking-wide text-cyan-50 hover:border-cyan-300 transition-colors cursor-pointer whitespace-nowrap"
+          style={panelStyle}
+        >
+          360° VIEW: {hud.autoOrbit ? 'ON' : 'OFF'}
+        </button>
+      </div>
+    </div>
+  );
+}

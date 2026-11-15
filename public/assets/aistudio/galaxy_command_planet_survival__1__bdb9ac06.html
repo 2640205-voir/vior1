@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Galaxy Command: Planet Survival</title>
+<style>
+:root{--cyan:#6beaff;--panel:rgba(5,14,28,.92);--line:rgba(66,214,250,.36);--muted:#9bb4cc}
+*{box-sizing:border-box}
+body{margin:0;overflow:hidden;background:#030813;color:#eaf7ff;font:14px/1.4 'Inter','Segoe UI',system-ui,sans-serif;font-variant-numeric:tabular-nums}
+#game{position:fixed;inset:0}canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none}
+header{position:absolute;top:14px;left:18px;right:18px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.logo{font-weight:900;letter-spacing:2px;color:var(--cyan);text-shadow:0 0 18px rgba(0,191,255,.55)}.logo small{display:block;font-size:9px;letter-spacing:3px;color:#9cb8d5}
+.chip,.panel{background:var(--panel);border:1px solid var(--line);box-shadow:0 10px 32px rgba(0,0,0,.62),inset 0 1px 0 rgba(125,211,252,.16);border-radius:12px}
+.chip{padding:8px 12px;font-size:11px;color:#c9eaff}
+.panel{pointer-events:auto;position:absolute;padding:13px;width:270px}
+#missionPanel{top:76px;left:16px}#inventoryPanel{top:76px;right:16px;max-height:calc(100vh - 155px);overflow-y:auto}
+h2{font-size:11px;color:var(--cyan);letter-spacing:2px;margin:0 0 9px}
+h3{font-size:10px;color:#b8d7ee;letter-spacing:1px;margin:12px 0 6px}
+.task{display:flex;gap:7px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #ffffff12;font-size:11px;color:#c4d8e9}
+.task .check{color:#6affbd;font-weight:900}.task.done{color:#7fae9e;text-decoration:line-through}
+.stat{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:5px 0;font-size:11px;color:#adc5dc;border-bottom:1px solid #ffffff10}.stat b{color:#fff}
+.bar{height:6px;background:#182b40;border-radius:8px;overflow:hidden;margin:5px 0 9px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#1689d0,#62f0ff);width:80%;transition:width .12s ease}
+button{pointer-events:auto;background:#0c3856;border:1px solid #3a9fc2;color:#eaffff;border-radius:8px;padding:9px 12px;font-weight:800;cursor:pointer;transition:all .15s ease}
+button:hover:not(:disabled){border-color:#7df1ff;box-shadow:0 0 15px #16c8ff55}
+button:disabled{opacity:.42;cursor:not-allowed;border-color:#264b63;box-shadow:none}
+.primary{background:linear-gradient(110deg,#0877b8,#08a7b4);border:0;width:100%;margin-top:8px}
+.mini-btn{padding:3px 7px;font-size:9px;letter-spacing:.6px;border-radius:6px;background:#0f4c73;border:1px solid #4cc8eb;color:#eaffff;white-space:nowrap}
+.mini-btn.deploy{background:linear-gradient(110deg,#0a80ba,#0ea89e);border-color:#74f2ff}
+.item-actions{display:flex;align-items:center;gap:6px}
+.craft-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #ffffff14;font-size:12px;color:#c4d8e9}
+.craft-info{display:flex;gap:9px;align-items:flex-start;flex:1}
+.craft-btns{display:flex;gap:6px;flex-shrink:0}
+.craft-btns button{padding:7px 10px;font-size:10px}
+.use-modal-btn{background:#12594e;border-color:#4ae3b5}
+.use-modal-btn:hover:not(:disabled){border-color:#8affdc;box-shadow:0 0 12px #2ee59d55}
+.owned-badge{display:inline-block;background:#0e334d;border:1px solid #398fb3;color:#8be9ff;border-radius:5px;padding:1px 6px;font-size:10px;margin-left:5px}
+.active-badge{display:inline-block;background:#124d3a;border:1px solid #4ae3b5;color:#8affdc;border-radius:5px;padding:1px 6px;font-size:10px;margin-left:5px}
+.tab-bar{display:flex;gap:6px;margin:10px 0 12px;border-bottom:1px solid #ffffff1f;padding-bottom:8px}
+.tab-btn{flex:1;background:#09273d;border:1px solid #2b6e8c;color:#9fc6de;padding:8px 10px;font-size:11px;letter-spacing:1px}
+.tab-btn.active{background:linear-gradient(110deg,#0877b8,#08a7b4);border-color:#7df1ff;color:#fff;box-shadow:0 0 14px #16c8ff44}
+.upgrade-card{background:#091f36;border:1px solid #2e84a666;border-radius:11px;padding:11px 12px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.upgrade-card.equipped{border-color:#5ef2c6;background:#09283b}
+.upgrade-meta{flex:1;font-size:12px;color:#d6ecff}
+.upgrade-perk{font-size:11px;color:#7de6ff;margin-top:2px}
+.upgrade-cost{font-size:10px;color:#9bb8d0;margin-top:3px}
+#prompt{position:absolute;bottom:92px;left:50%;transform:translateX(-50%);padding:9px 15px;text-align:center;min-width:260px;max-width:90%;font-size:12px}
+#bottom{position:absolute;bottom:15px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;width:96%}
+.key{border:1px solid #7391aa;border-radius:4px;padding:1px 5px;color:#fff}
+#toast{position:absolute;top:98px;left:50%;transform:translateX(-50%);background:#082b42;border:1px solid var(--cyan);padding:9px 15px;border-radius:9px;display:none;font-size:12px;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.55)}
+.overlay{position:fixed;inset:0;z-index:5;background:rgba(2,7,17,.92);display:flex;align-items:center;justify-content:center;padding:18px}
+.modal{width:min(580px,96vw);background:#07182c;border:1px solid #46dafa;border-radius:17px;padding:25px;box-shadow:0 0 70px #007db655;max-height:92vh;overflow-y:auto}
+.modal h1{font-size:25px;letter-spacing:2px;color:var(--cyan);margin:0 0 4px}.modal p{color:#b5cde1}.small{font-size:11px;color:#85a5c2}
+.weatherChip{position:absolute;top:58px;left:50%;transform:translateX(-50%);padding:7px 12px;background:rgba(7,27,48,.92);border:1px solid #65dfff66;border-radius:9px;font-size:11px;color:#d8f6ff;white-space:nowrap}
+#roverPanel{position:absolute;bottom:72px;right:16px;width:230px;display:none}
+@media(max-width:700px){.weatherChip{top:52px;font-size:9px}#roverPanel{right:7px;bottom:115px;width:200px}}
+#landingControls{display:none;position:absolute;bottom:90px;left:50%;transform:translateX(-50%);pointer-events:auto}
+#landingControls button{font-size:13px;padding:12px 22px}
+#win{display:none}
+@media(max-width:700px){.panel{width:215px;padding:9px}#missionPanel{left:7px;top:70px}#inventoryPanel{right:7px;top:70px}header{left:8px;right:8px}.logo{font-size:12px}.chip.hide{display:none}#prompt{bottom:115px}}
+@media(max-width:480px){.panel{width:calc(50% - 12px);max-height:48vh;overflow:auto;font-size:10px}.task,.stat{font-size:10px}.craft-row{flex-direction:column;align-items:stretch}.craft-btns{justify-content:flex-end}}
+</style></head>
+<body>
+<div id="game"></div>
+<div id="hud">
+<header><div class="logo">GALAXY COMMAND <small>PLANETARY EXPEDITION // 01</small></div><div class="chip">PLANET: <b id="planetHeader">KEPLER-186f</b></div><div class="chip hide">COMMANDER ALEX VEGA · <span id="phase">ORBIT</span></div></header>
+<div id="toast"></div><div class="weatherChip" id="weatherStatus">WEATHER: CLEAR · VISIBILITY 100% · AUTO CYCLE</div>
+<section class="panel" id="missionPanel">
+<h2>MISSION OBJECTIVES</h2>
+<div id="tasks">
+<div class="task" id="t1"><span class="check">○</span><span>Collect <b>3 Water Ice</b> samples</span></div>
+<div class="task" id="t2"><span class="check">○</span><span>Collect <b>4 Iron Ore</b> pieces</span></div>
+<div class="task" id="t3"><span class="check">○</span><span>Collect <b>2 Silicon</b> crystals</span></div>
+<div class="task" id="t4"><span class="check">○</span><span>Build a <b>Research Beacon</b></span></div>
+</div>
+<h3>SUIT OXYGEN <span class="small">(PRESS Q TO REFILL)</span></h3><div class="stat"><span>Oxygen reserve</span><b id="oxygenText">100%</b></div><div class="bar"><i id="oxygenBar"></i></div>
+<div class="stat"><span>Active Suit</span><b id="hudSuitName">MK-I EXPLORER</b></div>
+<div class="stat"><span>Active Rover</span><b id="hudRoverName">PATHFINDER 6x6</b></div>
+<div class="stat"><span>Built Bunkers</span><b id="bunkerCountHud">0</b></div>
+<h3>MISSION STATUS</h3><div class="stat"><span>Planet exploration</span><b id="progress">0 / 4 tasks</b></div>
+<button class="primary" id="buildBtn" disabled>DEPLOY RESEARCH BEACON KIT</button>
+</section>
+<section class="panel" id="inventoryPanel">
+<h2>RESOURCE INVENTORY</h2>
+<div class="stat"><span>❄ Water ice</span><b id="ice">0 / 3</b></div>
+<div class="stat"><span>⬡ Iron ore</span><b id="iron">0 / 4</b></div>
+<div class="stat"><span>◇ Silicon</span><b id="silicon">0 / 2</b></div>
+<div class="stat"><span>⚡ Energy cells</span><b id="energy">2</b></div>
+<h3>CRAFTED EQUIPMENT</h3>
+<div class="stat">
+  <span>🫧 Oxygen canisters</span>
+  <span class="item-actions"><b id="oxygenKits">0</b><button class="mini-btn" id="useOxygenHud" disabled title="Refill +35% Suit Oxygen (Hotkey: Q)">REFILL [Q]</button></span>
+</div>
+<div class="stat">
+  <span>🛠 Rover repair kits</span>
+  <span class="item-actions"><b id="repairKits">0</b><button class="mini-btn" id="useRepairHud" disabled title="Restore +50% Rover Battery (Hotkey: F)">USE [F]</button></span>
+</div>
+<div class="stat">
+  <span>🏠 Bunker kits</span>
+  <span class="item-actions"><b id="bunkerKits">0</b><button class="mini-btn deploy" id="useBunkerHud" disabled title="Build Pressurized Bunker (Hotkey: B)">BUILD [B]</button></span>
+</div>
+<div class="stat">
+  <span>📡 Beacon kits</span>
+  <span class="item-actions"><b id="beaconKits">0</b><button class="mini-btn deploy" id="useBeaconHud" disabled title="Deploy Research Beacon">DEPLOY</button></span>
+</div>
+<h3>FIELD EQUIPMENT</h3>
+<div class="stat"><span>Mining tool</span><b>ONLINE</b></div>
+<div class="stat"><span>Scanner</span><b id="scanner">READY</b></div>
+<div class="stat"><span>Rover</span><b id="roverState">READY · PRESS R</b></div><div class="stat"><span>Mine sites</span><b>4 LOCATIONS</b></div>
+<h3>FIELD TIP</h3><div class="small">Hold <b>E</b> near deposits to mine. Press <b>Q</b> to refill oxygen, <b>B</b> to build a crafted Bunker, and <b>U</b> to unlock &amp; switch Planets, Suits, and Rovers!</div>
+</section>
+<div class="chip" id="prompt">Land your spacecraft to begin the expedition.</div><section class="panel" id="roverPanel"><h2>ROVER TELEMETRY</h2><div class="stat"><span>Drive mode</span><b>ACTIVE</b></div><div class="stat"><span>Battery</span><b id="roverBattery">100%</b></div><div class="stat"><span>Weather impact</span><b id="roverImpact">NORMAL</b></div><div class="small">WASD drive · R exit · E mine · F repair kit</div></section>
+<div id="landingControls"><button id="landBtn">▼ BEGIN LANDING</button></div>
+<div id="bottom"><div class="chip">MOVE <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span></div><div class="chip">MINE <span class="key">E</span></div><div class="chip">REFILL O2 <span class="key">Q</span> · BUNKER <span class="key">B</span></div><button id="scanBtn">SCAN AREA</button><button id="craftBtn">CRAFTING [C]</button><button id="upgradeBtn">PLANETS &amp; GEAR [U]</button><button id="viewBtn">360° VIEW: OFF</button></div>
+</div>
+<div class="overlay" id="intro"><div class="modal"><h1>PLANET SURVIVAL</h1><b>KEPLER-186f // RESOURCE EXPEDITION</b><p>You are Commander Alex Vega. Your spacecraft has reached a new world, but the research station cannot be activated until you locate and collect vital materials.</p><p><b>Your mission:</b> land safely, explore the terrain, mine water ice, iron and silicon, craft equipment &amp; bunkers, and deploy a Research Beacon.</p><p class="small">Controls: WASD to walk/drive · R near rover to enter/exit · Hold E to mine · <b>Q to refill Oxygen</b> (with Oxygen Canister or near Landing Pad/Bunkers) · F to repair Rover · B to deploy Bunker · C for Crafting · U for Planets, Suits &amp; Rovers.</p><button class="primary" id="startBtn">ENTER ORBIT</button></div></div>
+<div class="overlay" id="craftModal" style="display:none"><div class="modal"><h1>FIELD FABRICATION</h1><b>RESOURCE-BASED CRAFTING & DEPLOYMENT</b><p class="small">Convert collected planetary materials into field equipment, bunkers, and outpost structures.</p>
+<div class="craft-row">
+  <div class="craft-info"><span>🫧</span><div><b>Oxygen canister</b><span class="owned-badge">OWNED: <span id="modalOxygenCount">0</span></span><br><span class="small">Cost: 1 Water Ice · restores +35% suit oxygen (Hotkey: Q)</span></div></div>
+  <div class="craft-btns"><button id="craftOxygen">CRAFT</button><button class="use-modal-btn" id="useOxygenModal" disabled>REFILL [Q]</button></div>
+</div>
+<div class="craft-row">
+  <div class="craft-info"><span>🛠</span><div><b>Rover repair kit</b><span class="owned-badge">OWNED: <span id="modalRepairCount">0</span></span><br><span class="small">Cost: 2 Iron Ore + 1 Silicon · restores +50% rover battery (Hotkey: F)</span></div></div>
+  <div class="craft-btns"><button id="craftRepair">CRAFT</button><button class="use-modal-btn" id="useRepairModal" disabled>USE [F]</button></div>
+</div>
+<div class="craft-row">
+  <div class="craft-info"><span>🏠</span><div><b>Habitation Bunker Kit</b><span class="owned-badge">OWNED: <span id="modalBunkerCount">0</span></span><br><span class="small">Cost: 2 Water Ice + 3 Iron Ore + 2 Silicon · safe shelter that recharges O2 &amp; rover power (Hotkey: B)</span></div></div>
+  <div class="craft-btns"><button id="craftBunker">CRAFT</button><button class="use-modal-btn" id="useBunkerModal" disabled>BUILD [B]</button></div>
+</div>
+<div class="craft-row">
+  <div class="craft-info"><span>📡</span><div><b>Research Beacon Kit</b><span class="owned-badge">OWNED: <span id="modalBeaconCount">0</span></span><br><span class="small">Cost: 3 Water Ice + 4 Iron Ore + 2 Silicon · completes mission</span></div></div>
+  <div class="craft-btns"><button id="craftBeacon">CRAFT</button><button class="use-modal-btn" id="useBeaconModal" disabled>DEPLOY</button></div>
+</div>
+<p class="small" id="craftMessage">Choose a blueprint to fabricate or use an owned item.</p><button class="primary" id="closeCraft">CLOSE FABRICATION BAY</button></div></div>
+<div class="overlay" id="upgradeModal" style="display:none"><div class="modal">
+  <h1>EXPEDITION &amp; ARMORY BAY</h1>
+  <b>SELECT PLANETS, SPACE SUITS &amp; ROVERS BY RESOURCES</b>
+  <p class="small">Spend collected planetary resources to unlock new worlds, advanced exosuits, and specialized rovers.</p>
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tabPlanets">🪐 PLANETS (3)</button>
+    <button class="tab-btn" id="tabSuits">🧑‍🚀 SPACE SUITS (3)</button>
+    <button class="tab-btn" id="tabRovers">🚙 ROVERS (3)</button>
+  </div>
+  <div id="upgradeList"></div>
+  <p class="small" id="upgradeMessage">Select a category above to view stats and unlock options.</p>
+  <button class="primary" id="closeUpgrade">CLOSE EXPEDITION BAY</button>
+</div></div>
+<div class="overlay" id="win"><div class="modal"><h1>MISSION COMPLETE!</h1><b>RESEARCH BEACON ONLINE</b><p>You collected the required materials and established the first research outpost on Kepler-186f.</p><p id="finalStats"></p><button class="primary" onclick="location.reload()">PLAY AGAIN</button></div></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+
+const isSoftwareGl=(()=>{
+ try{
+  const c=document.createElement('canvas');
+  const gl=c.getContext('webgl2');
+  if(!gl)return true;
+  const ext=gl.getExtension('WEBGL_debug_renderer_info');
+  const gpu=String(gl.getParameter(ext?ext.UNMASKED_RENDERER_WEBGL:gl.RENDERER));
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
+  return /SwiftShader|llvmpipe|softpipe|Software|Basic Render/i.test(gpu);
+ }catch{return true;}
+})();
+
+function hash2D(x,y){const n=Math.sin(x*127.1+y*311.7)*43758.5453123;return n-Math.floor(n);}
+function vNoise(x,y){
+ const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;
+ const u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+ const a=hash2D(xi,yi),b=hash2D(xi+1,yi),c=hash2D(xi,yi+1),d=hash2D(xi+1,yi+1);
+ return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;
+}
+function fbm(x,y,oct=4){
+ let val=0,amp=.5,freq=1;
+ for(let i=0;i<oct;i++){val+=amp*vNoise(x*freq,y*freq);freq*=2.03;amp*=.5;}
+ return val;
+}
+
+function makeParticleTex(){
+ const s=64,c=document.createElement('canvas');c.width=s;c.height=s;
+ const ctx=c.getContext('2d'),g=ctx.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+ g.addColorStop(0,'rgba(255,255,255,1)');
+ g.addColorStop(0.3,'rgba(255,255,255,.78)');
+ g.addColorStop(0.7,'rgba(255,255,255,.2)');
+ g.addColorStop(1,'rgba(255,255,255,0)');
+ ctx.fillStyle=g;ctx.fillRect(0,0,s,s);
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+
+function makeContactShadowTex(){
+ const s=128,c=document.createElement('canvas');c.width=s;c.height=s;
+ const ctx=c.getContext('2d'),g=ctx.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+ g.addColorStop(0,'rgba(0,0,0,.85)');
+ g.addColorStop(.55,'rgba(0,0,0,.38)');
+ g.addColorStop(1,'rgba(0,0,0,0)');
+ ctx.fillStyle=g;ctx.fillRect(0,0,s,s);
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+
+function makeTerrainTextures(maxAniso){
+ const s=512;
+ const colC=document.createElement('canvas');colC.width=s;colC.height=s;const cCtx=colC.getContext('2d');const cImg=cCtx.createImageData(s,s);
+ const bmpC=document.createElement('canvas');bmpC.width=s;bmpC.height=s;const bCtx=bmpC.getContext('2d');const bImg=bCtx.createImageData(s,s);
+ for(let y=0;y<s;y++){
+  for(let x=0;x<s;x++){
+   const idx=(y*s+x)*4;
+   const u=x/s,v=y/s;
+   const n=fbm(u*10,v*10,4);
+   const ridge=Math.abs(fbm(u*20+4.2,v*20+1.9,3)-.5)*2;
+   const grit=hash2D(x,y)*.12;
+   const base=Math.floor(155+n*75-ridge*32+grit*40);
+   const cl=Math.max(40,Math.min(255,base));
+   cImg.data[idx]=cl;cImg.data[idx+1]=cl;cImg.data[idx+2]=cl;cImg.data[idx+3]=255;
+   const bVal=Math.max(0,Math.min(255,Math.floor(85+n*110+ridge*65)));
+   bImg.data[idx]=bVal;bImg.data[idx+1]=bVal;bImg.data[idx+2]=bVal;bImg.data[idx+3]=255;
+  }
+ }
+ cCtx.putImageData(cImg,0,0);bCtx.putImageData(bImg,0,0);
+ for(let i=0;i<36;i++){
+  const cx=hash2D(i,2.1)*s,cy=hash2D(i,9.7)*s,r=6+hash2D(i,4.4)*20;
+  const cg=cCtx.createRadialGradient(cx,cy,r*.2,cx,cy,r);
+  cg.addColorStop(0,'rgba(110,112,120,.38)');cg.addColorStop(.82,'rgba(225,228,235,.22)');cg.addColorStop(1,'rgba(180,180,180,0)');
+  cCtx.fillStyle=cg;cCtx.beginPath();cCtx.arc(cx,cy,r,0,Math.PI*2);cCtx.fill();
+  const bg=bCtx.createRadialGradient(cx,cy,r*.2,cx,cy,r);
+  bg.addColorStop(0,'rgba(40,40,40,.55)');bg.addColorStop(.86,'rgba(230,230,230,.45)');bg.addColorStop(1,'rgba(128,128,128,0)');
+  bCtx.fillStyle=bg;bCtx.beginPath();bCtx.arc(cx,cy,r,0,Math.PI*2);bCtx.fill();
+ }
+ const map=new THREE.CanvasTexture(colC);map.colorSpace=THREE.SRGBColorSpace;map.wrapS=map.wrapT=THREE.MirroredRepeatWrapping;map.repeat.set(9,9);map.anisotropy=maxAniso;
+ const bumpMap=new THREE.CanvasTexture(bmpC);bumpMap.colorSpace=THREE.NoColorSpace;bumpMap.wrapS=bumpMap.wrapT=THREE.MirroredRepeatWrapping;bumpMap.repeat.set(9,9);
+ return{map,bumpMap};
+}
+
+function makeBrushedMetalTex(){
+ const s=256,c=document.createElement('canvas');c.width=s;c.height=s;const ctx=c.getContext('2d');
+ ctx.fillStyle='#969696';ctx.fillRect(0,0,s,s);
+ for(let y=0;y<s;y+=2){const v=134+Math.floor(hash2D(y,3.1)*32);ctx.fillStyle=`rgb(${v},${v},${v})`;ctx.fillRect(0,y,s,1);}
+ ctx.strokeStyle='rgba(36,42,50,.48)';ctx.lineWidth=1;
+ for(let i=0;i<s;i+=32){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,s);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(s,i);ctx.stroke();}
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.NoColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(2,2);return t;
+}
+
+function makeMoonTex(maxAniso){
+ const s=256,c=document.createElement('canvas');c.width=s;c.height=s;const ctx=c.getContext('2d');
+ const img=ctx.createImageData(s,s);
+ for(let y=0;y<s;y++)for(let x=0;x<s;x++){
+  const idx=(y*s+x)*4,n=fbm((x/s)*7,(y/s)*7,4),v=Math.floor(135+n*95);
+  img.data[idx]=v;img.data[idx+1]=v;img.data[idx+2]=Math.min(255,v+8);img.data[idx+3]=255;
+ }
+ ctx.putImageData(img,0,0);
+ for(let i=0;i<48;i++){
+  const cx=hash2D(i,1.2)*s,cy=hash2D(i,8.4)*s,r=4+hash2D(i,5.6)*18;
+  const g=ctx.createRadialGradient(cx,cy,r*.15,cx,cy,r);
+  g.addColorStop(0,'rgba(78,82,92,.58)');g.addColorStop(.82,'rgba(225,228,236,.38)');g.addColorStop(1,'rgba(150,150,160,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+ }
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=maxAniso;return t;
+}
+
+function makeStudioEnvMap(renderer){
+ const w=256,h=128,c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');
+ const grad=ctx.createLinearGradient(0,0,0,h);
+ grad.addColorStop(0,'#172a49');
+ grad.addColorStop(.38,'#3a668f');
+ grad.addColorStop(.52,'#b8d9f2');
+ grad.addColorStop(.68,'#4f443d');
+ grad.addColorStop(1,'#171418');
+ ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
+ // Key warm solar lobe & cool rim reflection cards for realistic PBR highlights
+ const sunG=ctx.createRadialGradient(w*.28,h*.3,2,w*.28,h*.3,w*.18);
+ sunG.addColorStop(0,'rgba(255,244,218,1)');sunG.addColorStop(.4,'rgba(255,212,150,.55)');sunG.addColorStop(1,'rgba(255,212,150,0)');
+ ctx.fillStyle=sunG;ctx.fillRect(0,0,w,h);
+ const rimG=ctx.createRadialGradient(w*.78,h*.36,2,w*.78,h*.36,w*.22);
+ rimG.addColorStop(0,'rgba(120,225,255,.9)');rimG.addColorStop(.5,'rgba(60,155,230,.3)');rimG.addColorStop(1,'rgba(60,155,230,0)');
+ ctx.fillStyle=rimG;ctx.fillRect(0,0,w,h);
+ const equirect=new THREE.CanvasTexture(c);
+ equirect.mapping=THREE.EquirectangularReflectionMapping;
+ equirect.colorSpace=THREE.SRGBColorSpace;
+ const pmrem=new THREE.PMREMGenerator(renderer);
+ const envRT=pmrem.fromEquirectangular(equirect);
+ equirect.dispose();pmrem.dispose();
+ return envRT.texture;
+}
+
+let scene,camera,renderer,clock,astronaut,rocket,rover,groundMesh,moonMesh,moonGlow,skyDome,resources=[],bunkers=[],keys={},landed=false,descending=false,descentElapsed=0,complete=false;
+let yaw=0,pitch=-.12,drag=false,px=0,py=0,oxygen=100,scanTime=0,autoOrbit=false,driving=false,roverBattery=100,weatherIndex=0,weatherClock=0,weatherParticles=null,sunLight=null,mineHold=0,mineTarget=null,mineCompleted=false;
+let suitMeshes=[],visorMesh=null,packMesh=null,roverHullMesh=null,roverDeckMesh=null,roverRoofMesh=null;
+let leftArmPivot=null,rightArmPivot=null,leftLegPivot=null,rightLegPivot=null,walkPhase=0;
+let roverWheels=[],roverMastHead=null,bunkerRadars=[],beaconCrystal=null,beaconRing=null,miningLaser=null;
+let ridgeInstanced=null,boulderInstanced=null,exhaustPool=[],sparkPool=[];
+let particleTex=null,shadowTex=null,metalBumpTex=null,terrainTex=null;
+const camTargetSmooth=new THREE.Vector3(),camPosSmooth=new THREE.Vector3(0,13,23);
+const inv={ice:0,iron:0,silicon:0,energy:2,oxygenKits:0,repairKits:0,bunkerKits:0,beaconKits:0};
+const needed={ice:3,iron:4,silicon:2};
+const mats={ice:0x76eaff,iron:0xe18b54,silicon:0xc49cff};
+
+const planetCatalog=[
+ {id:'kepler',name:'KEPLER-186f',subtitle:'Temperate Terran Exoplanet',perk:'Balanced resources · Standard weather cycle',cost:{},unlocked:true,groundTint:[.52,.49,.47],skyTop:0x060d20,skyHorizon:0x1b375e,moonColor:0x8e99b2,weatherBias:[0,1,2,3],nodes:[['ice',-12,-10],['ice',13,-16],['ice',17,9],['iron',-17,5],['iron',-9,18],['iron',10,20],['iron',22,-3],['silicon',5,-25],['silicon',-23,-18]]},
+ {id:'ares',name:'ARES-IV CRIMSON',subtitle:'Arid Iron-Rich Canyon World',perk:'High Iron & Silicon yield · Frequent Dust Storms',cost:{iron:2,silicon:1},unlocked:false,groundTint:[.76,.37,.27],skyTop:0x180908,skyHorizon:0x633223,moonColor:0xc48268,weatherBias:[1,1,0,3],nodes:[['iron',-11,-9],['iron',14,-14],['iron',18,8],['iron',-16,6],['iron',8,19],['silicon',-8,17],['silicon',21,-4],['ice',6,-24],['ice',-22,-16]]},
+ {id:'glacies',name:'GLACIES-9',subtitle:'Cryogenic Sub-Zero Ice Moon',perk:'Abundant Water Ice & Silicon · Heavy Ice Storms',cost:{ice:2,silicon:1},unlocked:false,groundTint:[.46,.67,.85],skyTop:0x041224,skyHorizon:0x27577d,moonColor:0xa8e2ff,weatherBias:[2,2,0,3],nodes:[['ice',-11,-10],['ice',12,-15],['ice',16,10],['ice',-18,4],['ice',9,20],['silicon',-9,17],['silicon',20,-5],['silicon',4,-24],['iron',-21,-17]]}
+];
+const suitCatalog=[
+ {id:'mk1',name:'MK-I EXPLORER',subtitle:'Standard Orbital Survey Suit',perk:'Baseline O2 efficiency · Standard sprint speed',cost:{},unlocked:true,o2Mult:1,speedMult:1,mineTime:1.25,suitColor:0xe9f1f7,visorColor:0xc79232,packColor:0xd54b51},
+ {id:'mk2',name:'MK-II THERMAL TITAN',subtitle:'Insulated Heavy Alloy Suit',perk:'-35% Oxygen drain · +15% Movement speed',cost:{iron:2,ice:1},unlocked:false,o2Mult:.65,speedMult:1.15,mineTime:1.1,suitColor:0xd8b25c,visorColor:0x26415c,packColor:0x394a59},
+ {id:'mk3',name:'MK-III AEGIS EXO-SUIT',subtitle:'Quantum-Shielded Recon Rig',perk:'-55% Oxygen drain · +25% Speed · +35% Faster Mining',cost:{silicon:2,iron:2,ice:1},unlocked:false,o2Mult:.45,speedMult:1.25,mineTime:.8,suitColor:0x49c6e5,visorColor:0xd7f4ff,packColor:0x175676}
+];
+const roverCatalog=[
+ {id:'pathfinder',name:'PATHFINDER 6x6',subtitle:'Standard Scientific Exploration Rover',perk:'Balanced drive speed & battery consumption',cost:{},unlocked:true,speed:9,drainMult:1,mineReach:3.4,solarCharge:0,hullColor:0xd1dce3,accentColor:0xc49545},
+ {id:'goliath',name:'GOLIATH HEAVY HAULER',subtitle:'Armored Deep-Core Mining Rig',perk:'50% slower battery drain · Extended 5.2m mining reach',cost:{iron:3,silicon:1},unlocked:false,speed:8.5,drainMult:.5,mineReach:5.2,solarCharge:0,hullColor:0x96403a,accentColor:0xe3a43b},
+ {id:'strider',name:'ION-STRIDER RECON',subtitle:'High-Velocity Solar Interceptor',perk:'+40% Top speed · Solar auto-recharge in clear weather',cost:{silicon:2,iron:2},unlocked:false,speed:12.6,drainMult:.75,mineReach:3.8,solarCharge:.35,hullColor:0x2e94c9,accentColor:0x6ef3ff}
+];
+let currentPlanet=planetCatalog[0],currentSuit=suitCatalog[0],currentRover=roverCatalog[0],activeUpgradeTab='planets';
+
+function say(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(say.timer);say.timer=setTimeout(()=>$('toast').style.display='none',2400);}
+function mat(color,rough=.7,metal=.15,extra={}){
+ const{bump,...rest}=extra;
+ return new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal,bumpMap:bump?metalBumpTex:null,bumpScale:bump?.015:0,...rest});
+}
+function terrainHeight(x,z){return Math.sin(x*.08)*.65+Math.cos(z*.07)*.5+Math.sin((x+z)*.035)*1.1;}
+
+function addContactShadow(parent,radius){
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(radius*2,radius*2),new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,opacity:.68,depthWrite:false}));
+ m.rotation.x=-Math.PI/2;m.position.y=.04;parent.add(m);return m;
+}
+
+function createSculptedRockGeo(){
+ const g=new THREE.IcosahedronGeometry(1,1);
+ const p=g.attributes.position;
+ for(let i=0;i<p.count;i++){
+  const vx=p.getX(i),vy=p.getY(i),vz=p.getZ(i);
+  const n=.76+hash2D(vx*13.7+vy*7.1,vz*19.3)*.44;
+  p.setXYZ(i,vx*n,vy*(n*.68),vz*n);
+ }
+ g.computeVertexNormals();
+ return g;
+}
+
+function createInstancedRocks(){
+ const rockGeo=createSculptedRockGeo();
+ const rockMat=new THREE.MeshStandardMaterial({color:0xffffff,map:terrainTex.map,bumpMap:terrainTex.bumpMap,bumpScale:.08,roughness:.92,metalness:.06});
+ const ridgeCount=34;
+ ridgeInstanced=new THREE.InstancedMesh(rockGeo,rockMat,ridgeCount);
+ ridgeInstanced.castShadow=!isSoftwareGl;ridgeInstanced.receiveShadow=true;
+ const dummy=new THREE.Object3D(),col=new THREE.Color();
+ for(let i=0;i<ridgeCount;i++){
+  const x=(hash2D(i,1.1)-.5)*145,z=-46-hash2D(i,2.2)*36,s=2.4+hash2D(i,3.3)*5.2;
+  dummy.position.set(x,terrainHeight(x,z)+s*.35,z);
+  dummy.rotation.set(hash2D(i,4.4)*.4,hash2D(i,5.5)*Math.PI*2,hash2D(i,6.6)*.4);
+  dummy.scale.set(s*(1+hash2D(i,7.7)*.35),s*.85,s*(.9+hash2D(i,8.8)*.3));
+  dummy.updateMatrix();ridgeInstanced.setMatrixAt(i,dummy.matrix);
+  col.setRGB(.26+hash2D(i,9.9)*.08,.29+hash2D(i,9.9)*.08,.35+hash2D(i,9.9)*.08);
+  ridgeInstanced.setColorAt(i,col);
+ }
+ scene.add(ridgeInstanced);
+
+ const boulderCount=96;
+ boulderInstanced=new THREE.InstancedMesh(rockGeo,rockMat,boulderCount);
+ boulderInstanced.castShadow=!isSoftwareGl;boulderInstanced.receiveShadow=true;
+ let idx=0;
+ for(let i=0;i<boulderCount;i++){
+  let x=(hash2D(i+50,1.4)-.5)*98,z=(hash2D(i+50,2.8)-.5)*98;
+  if(Math.abs(x)<7&&Math.abs(z)<8){x+=x>=0?9:-9;}
+  const s=.28+hash2D(i+50,3.9)*1.35;
+  dummy.position.set(x,terrainHeight(x,z)+s*.32,z);
+  dummy.rotation.set(hash2D(i,4.1)*Math.PI,hash2D(i,5.2)*Math.PI,hash2D(i,6.3)*Math.PI);
+  dummy.scale.set(s*(.85+hash2D(i,7.4)*.35),s*(.6+hash2D(i,8.5)*.3),s*(.85+hash2D(i,9.6)*.35));
+  dummy.updateMatrix();boulderInstanced.setMatrixAt(idx,dummy.matrix);
+  const tint=.34+hash2D(i+50,6.1)*.18;
+  col.setRGB(tint,tint*.97,tint*.95);
+  boulderInstanced.setColorAt(idx,col);
+  idx++;
+ }
+ scene.add(boulderInstanced);
+}
+
+function createAstronaut(){
+ const g=new THREE.Group();
+ const suitMat=mat(0xe9f1f7,.42,.18,{bump:true});
+ const jointMat=mat(0x283546,.65,.35);
+ const visorMat=new THREE.MeshStandardMaterial({color:0xc79232,roughness:.1,metalness:.95,envMapIntensity:1.6});
+ const packMat=mat(0xd54b51,.45,.32,{bump:true});
+ suitMeshes=[];
+ const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.4,.68,6,12),suitMat);torso.position.y=1.18;g.add(torso);suitMeshes.push(torso);
+ const belt=new THREE.Mesh(new THREE.CylinderGeometry(.43,.43,.14,16),jointMat);belt.position.y=.86;g.add(belt);
+ const chest=new THREE.Mesh(new THREE.BoxGeometry(.38,.28,.16),jointMat);chest.position.set(0,1.26,.36);g.add(chest);
+ const chestLed=new THREE.Mesh(new THREE.BoxGeometry(.16,.07,.04),new THREE.MeshBasicMaterial({color:0x6beaff}));chestLed.position.set(0,1.28,.44);g.add(chestLed);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.38,24,18),suitMat);head.position.y=2.04;g.add(head);suitMeshes.push(head);
+ const collar=new THREE.Mesh(new THREE.TorusGeometry(.32,.07,10,20),jointMat);collar.rotation.x=Math.PI/2;collar.position.y=1.7;g.add(collar);
+ visorMesh=new THREE.Mesh(new THREE.SphereGeometry(.31,24,18),visorMat);visorMesh.position.set(0,2.06,.24);visorMesh.scale.set(1.02,.76,.55);g.add(visorMesh);
+
+ // Articulated arm pivots
+ leftArmPivot=new THREE.Group();leftArmPivot.position.set(-.5,1.52,0);
+ const lArm=new THREE.Mesh(new THREE.CapsuleGeometry(.13,.56,5,10),suitMat);lArm.position.y=-.32;lArm.rotation.z=-.12;leftArmPivot.add(lArm);suitMeshes.push(lArm);
+ const lGlove=new THREE.Mesh(new THREE.SphereGeometry(.14,12,10),jointMat);lGlove.position.set(-.05,-.66,0);leftArmPivot.add(lGlove);
+ g.add(leftArmPivot);
+
+ rightArmPivot=new THREE.Group();rightArmPivot.position.set(.5,1.52,0);
+ const rArm=new THREE.Mesh(new THREE.CapsuleGeometry(.13,.56,5,10),suitMat);rArm.position.y=-.32;rArm.rotation.z=.12;rightArmPivot.add(rArm);suitMeshes.push(rArm);
+ const rGlove=new THREE.Mesh(new THREE.SphereGeometry(.14,12,10),jointMat);rGlove.position.set(.05,-.66,0);rightArmPivot.add(rGlove);
+ const mineTool=new THREE.Mesh(new THREE.CylinderGeometry(.06,.08,.36,10),mat(0x64798c,.35,.75));mineTool.rotation.x=Math.PI/2;mineTool.position.set(.06,-.66,.22);rightArmPivot.add(mineTool);
+ const toolTip=new THREE.Mesh(new THREE.SphereGeometry(.055,10,8),new THREE.MeshBasicMaterial({color:0x6beaff}));toolTip.position.set(.06,-.66,.4);rightArmPivot.add(toolTip);
+ g.add(rightArmPivot);
+
+ // Articulated leg pivots
+ leftLegPivot=new THREE.Group();leftLegPivot.position.set(-.21,.82,0);
+ const lLeg=new THREE.Mesh(new THREE.CapsuleGeometry(.155,.54,5,10),suitMat);lLeg.position.y=-.34;leftLegPivot.add(lLeg);suitMeshes.push(lLeg);
+ const lBoot=new THREE.Mesh(new THREE.BoxGeometry(.24,.18,.34),jointMat);lBoot.position.set(0,-.72,.05);leftLegPivot.add(lBoot);
+ g.add(leftLegPivot);
+
+ rightLegPivot=new THREE.Group();rightLegPivot.position.set(.21,.82,0);
+ const rLeg=new THREE.Mesh(new THREE.CapsuleGeometry(.155,.54,5,10),suitMat);rLeg.position.y=-.34;rightLegPivot.add(rLeg);suitMeshes.push(rLeg);
+ const rBoot=new THREE.Mesh(new THREE.BoxGeometry(.24,.18,.34),jointMat);rBoot.position.set(0,-.72,.05);rightLegPivot.add(rBoot);
+ g.add(rightLegPivot);
+
+ packMesh=new THREE.Mesh(new THREE.BoxGeometry(.58,.78,.32),packMat);packMesh.position.set(0,1.22,-.36);g.add(packMesh);
+ const ant=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,.55,8),mat(0xbccad6,.3,.8));ant.position.set(.22,1.82,-.42);g.add(ant);
+ const lamp=new THREE.PointLight(0x76dfff,3.2,8);lamp.position.set(0,2.15,.65);g.add(lamp);
+ addContactShadow(g,.85);
+ return g;
+}
+
+function createRocket(){
+ const g=new THREE.Group();
+ const hull=mat(0xd7e2ec,.28,.78,{bump:true}),dark=mat(0x1f2b38,.55,.6),accent=mat(0xd74c55,.4,.35),glass=new THREE.MeshStandardMaterial({color:0x2688c7,roughness:.12,metalness:.85,emissive:0x0a3959,emissiveIntensity:.5});
+ const body=new THREE.Mesh(new THREE.CylinderGeometry(.82,1.12,7.8,28),hull);body.position.y=4.1;g.add(body);
+ const collar=new THREE.Mesh(new THREE.CylinderGeometry(1.16,1.18,.45,28),dark);collar.position.y=.42;g.add(collar);
+ const stripe=new THREE.Mesh(new THREE.CylinderGeometry(.92,.95,.55,28),accent);stripe.position.y=6.1;g.add(stripe);
+ const nose=new THREE.Mesh(new THREE.ConeGeometry(.82,2.4,28),hull);nose.position.y=9.2;g.add(nose);
+ const win=new THREE.Mesh(new THREE.SphereGeometry(.38,20,16),glass);win.position.set(0,6.75,.79);win.scale.set(1,1.15,.45);g.add(win);
+ const bell=new THREE.Mesh(new THREE.CylinderGeometry(.42,.72,.85,20),dark);bell.position.y=-.15;g.add(bell);
+ for(let a=0;a<3;a++){
+  const ang=a*Math.PI*2/3;
+  const fin=new THREE.Mesh(new THREE.BoxGeometry(.16,2.1,.92),accent);
+  fin.position.set(Math.cos(ang)*1.05,1.25,Math.sin(ang)*1.05);fin.rotation.y=-ang;g.add(fin);
+  const leg=new THREE.Mesh(new THREE.CylinderGeometry(.06,.09,1.8,8),hull);
+  leg.position.set(Math.cos(ang)*1.38,.65,Math.sin(ang)*1.38);leg.rotation.z=Math.cos(ang)*.42;leg.rotation.x=-Math.sin(ang)*.42;g.add(leg);
+  const foot=new THREE.Mesh(new THREE.CylinderGeometry(.28,.34,.12,12),dark);
+  foot.position.set(Math.cos(ang)*1.75,.06,Math.sin(ang)*1.75);g.add(foot);
+ }
+ const flameGroup=new THREE.Group();flameGroup.name='flame';flameGroup.position.y=-.5;
+ const outerFlame=new THREE.Mesh(new THREE.ConeGeometry(.68,2.8,18),new THREE.MeshBasicMaterial({color:0xff7b26,transparent:true,opacity:.85}));
+ outerFlame.rotation.x=Math.PI;outerFlame.position.y=-1.35;flameGroup.add(outerFlame);
+ const innerFlame=new THREE.Mesh(new THREE.ConeGeometry(.38,1.9,14),new THREE.MeshBasicMaterial({color:0xfff2b8}));
+ innerFlame.rotation.x=Math.PI;innerFlame.position.y=-.9;flameGroup.add(innerFlame);
+ const engineGlow=new THREE.PointLight(0xff9238,14,16);engineGlow.position.y=-1.2;flameGroup.add(engineGlow);
+ g.add(flameGroup);
+ return g;
+}
+
+function makeDeposit(type,x,z){
+ const group=new THREE.Group(),color=mats[type];
+ const crystalMat=new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.48,roughness:.18,metalness:.35,envMapIntensity:1.5});
+ const count=type==='iron'?5:4;
+ for(let i=0;i<count;i++){
+  const geo=type==='ice'?new THREE.ConeGeometry(.28+hash2D(i,x)*.16,.95+hash2D(i,z)*.45,6):new THREE.OctahedronGeometry(.4+hash2D(i,x)*.22,0);
+  const mesh=new THREE.Mesh(geo,crystalMat);
+  mesh.position.set((hash2D(i,1.7)-.5)*.9,.42+hash2D(i,3.1)*.38,(hash2D(i,5.3)-.5)*.85);
+  mesh.rotation.set((hash2D(i,7.1)-.5)*.6,hash2D(i,2.9)*Math.PI,(hash2D(i,8.3)-.5)*.6);
+  group.add(mesh);
+ }
+ const baseRock=new THREE.Mesh(new THREE.DodecahedronGeometry(.75,1),mat(0x3b434f,.92,.08));
+ baseRock.scale.set(1.2,.45,1.1);baseRock.position.y=.12;group.add(baseRock);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(.95,.035,10,36),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.75}));
+ ring.rotation.x=Math.PI/2;ring.position.y=.09;ring.name='pulseRing';group.add(ring);
+ const y=terrainHeight(x,z);
+ group.position.set(x,y,z);group.userData={type,active:true,baseY:y};scene.add(group);resources.push(group);
+ const light=new THREE.PointLight(color,2,5.5);light.position.y=1.2;group.add(light);
+}
+
+const weatherTypes=[
+ {name:'CLEAR',visibility:100,speed:1,oxygen:1,fog:115,bg:0x070d1e,light:3.2,impact:'NORMAL',color:0xbfeaff},
+ {name:'DUST STORM',visibility:42,speed:.62,oxygen:1.7,fog:26,bg:0x573325,light:1.2,impact:'LOW GRIP',color:0xe6a36c},
+ {name:'ICE STORM',visibility:55,speed:.72,oxygen:1.45,fog:33,bg:0x5d7a91,light:1.6,impact:'SLIPPERY',color:0xb9eaff},
+ {name:'ELECTRICAL STORM',visibility:68,speed:.82,oxygen:1.25,fog:46,bg:0x151b3a,light:.95,impact:'POWER DRAIN',color:0x9c9aff}
+];
+
+function setWeather(index,announce=true){
+ weatherIndex=(index+weatherTypes.length)%weatherTypes.length;const w=weatherTypes[weatherIndex];
+ scene.background.setHex(w.bg);scene.fog.color.setHex(w.bg);scene.fog.far=w.fog;
+ if(skyDome){
+  const u=skyDome.material.uniforms;
+  u.uTopColor.value.setHex(weatherIndex===0?currentPlanet.skyTop:w.bg);
+  u.uHorizonColor.value.setHex(weatherIndex===0?currentPlanet.skyHorizon:w.bg);
+ }
+ if(sunLight)sunLight.intensity=w.light;
+ $('weatherStatus').textContent='WEATHER: '+w.name+' · VISIBILITY '+w.visibility+'% · AUTO CYCLE';$('roverImpact').textContent=w.impact;
+ if(weatherParticles){scene.remove(weatherParticles);weatherParticles.geometry.dispose();weatherParticles.material.dispose();}
+ const positions=[];for(let i=0;i<720;i++)positions.push((Math.random()-.5)*104,Math.random()*30+1,(Math.random()-.5)*104);
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+ weatherParticles=new THREE.Points(geo,new THREE.PointsMaterial({color:w.color,map:particleTex,size:weatherIndex===1?1.25:.65,transparent:true,opacity:weatherIndex===0?0:.62,depthWrite:false}));
+ scene.add(weatherParticles);
+ if(announce)say(w.name+' conditions active: '+w.impact+'.');
+}
+
+function createMineSite(x,z){
+ const g=new THREE.Group(),stone=mat(0x363f4c,.88,.12),metal=mat(0x7892a4,.35,.72,{bump:true});
+ const arch=new THREE.Mesh(new THREE.TorusGeometry(1.4,.24,10,24,Math.PI),stone);arch.rotation.z=Math.PI;arch.position.y=1.4;g.add(arch);
+ const opening=new THREE.Mesh(new THREE.CircleGeometry(1.12,24),new THREE.MeshBasicMaterial({color:0x050912}));opening.position.set(0,.3,-.08);g.add(opening);
+ for(const side of [-1,1]){
+  const post=new THREE.Mesh(new THREE.BoxGeometry(.2,2.2,.24),metal);post.position.set(side*1.3,1.05,0);g.add(post);
+  const beacon=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),new THREE.MeshBasicMaterial({color:0x54e5ff}));beacon.position.set(side*1.3,2.22,0);g.add(beacon);
+ }
+ const sign=new THREE.Mesh(new THREE.BoxGeometry(1.3,.36,.14),new THREE.MeshStandardMaterial({color:0x17617a,emissive:0x0c4961,emissiveIntensity:.7,roughness:.35,metalness:.4}));
+ sign.position.set(0,2.62,.05);g.add(sign);
+ const lamp=new THREE.PointLight(0x54e5ff,2.4,9);lamp.position.set(0,2.1,1);g.add(lamp);
+ g.position.set(x,terrainHeight(x,z),z);scene.add(g);
+}
+
+function createSkyDome(){
+ const geo=new THREE.SphereGeometry(190,32,20);
+ const m=new THREE.ShaderMaterial({
+  side:THREE.BackSide,depthWrite:false,
+  uniforms:{uTopColor:{value:new THREE.Color(currentPlanet.skyTop)},uHorizonColor:{value:new THREE.Color(currentPlanet.skyHorizon)}},
+  vertexShader:`varying vec3 vWorldPos;void main(){vec4 wp=modelMatrix*vec4(position,1.0);vWorldPos=wp.xyz;gl_Position=projectionMatrix*viewMatrix*wp;}`,
+  fragmentShader:`uniform vec3 uTopColor;uniform vec3 uHorizonColor;varying vec3 vWorldPos;void main(){float h=normalize(vWorldPos).y;float t=smoothstep(-0.08,0.62,h);gl_FragColor=vec4(mix(uHorizonColor,uTopColor,t),1.0);}`
+ });
+ const dome=new THREE.Mesh(geo,m);
+ scene.add(dome);
+ return dome;
+}
+
+function createParticlePool(count,color,size){
+ const arr=[];
+ const m=new THREE.SpriteMaterial({map:particleTex,color,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending});
+ for(let i=0;i<count;i++){
+  const sp=new THREE.Sprite(m.clone());sp.scale.setScalar(size);sp.visible=false;scene.add(sp);
+  arr.push({sprite:sp,vel:new THREE.Vector3(),life:0,maxLife:1,baseSize:size});
+ }
+ return arr;
+}
+function spawnParticle(pool,pos,vel,life,colorHex){
+ for(const p of pool){
+  if(p.life<=0){
+   p.sprite.position.copy(pos);p.vel.copy(vel);p.life=life;p.maxLife=life;
+   if(colorHex)p.sprite.material.color.setHex(colorHex);
+   p.sprite.visible=true;return;
+  }
+ }
+}
+function updateParticlePool(pool,dt){
+ for(const p of pool){
+  if(p.life>0){
+   p.life-=dt;
+   if(p.life<=0){p.sprite.visible=false;continue;}
+   p.sprite.position.addScaledVector(p.vel,dt);
+   const ratio=p.life/p.maxLife;
+   p.sprite.material.opacity=ratio*.75;
+   p.sprite.scale.setScalar(p.baseSize*(1+(1-ratio)*1.4));
+  }
+ }
+}
+
+function init(){
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x070d1e);scene.fog=new THREE.Fog(0x070d1e,38,115);
+ camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,280);
+ renderer=new THREE.WebGLRenderer({antialias:!isSoftwareGl,powerPreference:'high-performance'});
+ renderer.setSize(innerWidth,innerHeight);
+ renderer.setPixelRatio(isSoftwareGl?1:Math.min(devicePixelRatio,2));
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;
+ renderer.shadowMap.enabled=!isSoftwareGl;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ $('game').appendChild(renderer.domElement);
+
+ const maxAniso=renderer.capabilities.getMaxAnisotropy();
+ particleTex=makeParticleTex();
+ shadowTex=makeContactShadowTex();
+ metalBumpTex=makeBrushedMetalTex();
+ terrainTex=makeTerrainTextures(maxAniso);
+ scene.environment=makeStudioEnvMap(renderer);
+
+ clock=new THREE.Clock();
+ scene.add(new THREE.HemisphereLight(0xc2e2ff,0x4a3930,1.7));
+ sunLight=new THREE.DirectionalLight(0xffdfb0,3.2);
+ sunLight.position.set(-28,44,18);
+ sunLight.castShadow=!isSoftwareGl;
+ sunLight.shadow.mapSize.set(2048,2048);
+ sunLight.shadow.camera.left=-60;sunLight.shadow.camera.right=60;sunLight.shadow.camera.top=60;sunLight.shadow.camera.bottom=-60;
+ scene.add(sunLight);
+ const rimLight=new THREE.DirectionalLight(0x52c8ff,1.25);rimLight.position.set(24,18,-30);scene.add(rimLight);
+
+ skyDome=createSkyDome();
+ // Circular soft stars
+ const starGeo=new THREE.BufferGeometry(),arr=[];
+ for(let i=0;i<2200;i++)arr.push((Math.random()-.5)*280,Math.random()*120+8,(Math.random()-.5)*280);
+ starGeo.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));
+ scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xdff0ff,map:particleTex,size:1.15,transparent:true,opacity:.92,alphaTest:.05,depthWrite:false})));
+
+ const moonTex=makeMoonTex(maxAniso);
+ moonMesh=new THREE.Mesh(new THREE.SphereGeometry(7.5,36,36),new THREE.MeshStandardMaterial({color:currentPlanet.moonColor,map:moonTex,roughness:.88,metalness:.05}));
+ moonMesh.position.set(38,30,-78);scene.add(moonMesh);
+ moonGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:particleTex,color:0x6bcaff,transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false}));
+ moonGlow.scale.setScalar(26);moonGlow.position.copy(moonMesh.position);scene.add(moonGlow);
+
+ // Textured terrain with bump relief + vertex shade
+ const geo=new THREE.PlaneGeometry(220,220,108,108);geo.rotateX(-Math.PI/2);
+ const p=geo.attributes.position,terrainColors=[];
+ for(let i=0;i<p.count;i++){
+  const x=p.getX(i),z=p.getZ(i),h=terrainHeight(x,z);
+  p.setY(i,h);
+  const shade=THREE.MathUtils.clamp(.78+h*.12+Math.sin(x*.28+z*.19)*.04,.58,.96);
+  terrainColors.push(currentPlanet.groundTint[0]*shade,currentPlanet.groundTint[1]*shade,currentPlanet.groundTint[2]*shade);
+ }
+ geo.setAttribute('color',new THREE.Float32BufferAttribute(terrainColors,3));geo.computeVertexNormals();
+ groundMesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,map:terrainTex.map,bumpMap:terrainTex.bumpMap,bumpScale:.18,roughness:.94,metalness:.04}));
+ groundMesh.receiveShadow=true;groundMesh.position.y=-.12;scene.add(groundMesh);
+
+ createInstancedRocks();
+
+ rocket=createRocket();rocket.position.set(-3,0,-5);scene.add(rocket);
+ // Landing pad with bevelled perimeter lamps
+ const padY=terrainHeight(-3,-5);
+ const pad=new THREE.Mesh(new THREE.CylinderGeometry(4.6,5.1,.32,48),mat(0x343f50,.55,.45,{bump:true}));pad.position.set(-3,padY+.08,-5);pad.receiveShadow=true;scene.add(pad);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(4.45,.08,10,64),new THREE.MeshBasicMaterial({color:0x54dfff}));ring.rotation.x=Math.PI/2;ring.position.set(-3,padY+.28,-5);scene.add(ring);
+ for(let i=0;i<8;i++){
+  const a=i*Math.PI/4;
+  const beacon=new THREE.Mesh(new THREE.SphereGeometry(.12,10,8),new THREE.MeshBasicMaterial({color:0x54dfff}));
+  beacon.position.set(-3+Math.cos(a)*4.45,padY+.32,-5+Math.sin(a)*4.45);scene.add(beacon);
+ }
+
+ // Six-wheel exploration rover with articulated spinning wheels & scanner head
+ rover=new THREE.Group();
+ const roverMetal=mat(0xd1dce3,.28,.78,{bump:true}),roverDark=mat(0x202a35,.55,.55),roverGold=mat(0xc49545,.32,.72,{bump:true}),roverGlass=new THREE.MeshStandardMaterial({color:0x16415e,roughness:.1,metalness:.88,envMapIntensity:1.5}),roverRubber=mat(0x15191e,.9,.08);
+ roverHullMesh=new THREE.Mesh(new THREE.BoxGeometry(2.45,.62,3.05),roverMetal);roverHullMesh.position.y=1.12;rover.add(roverHullMesh);
+ const lowerHull=new THREE.Mesh(new THREE.BoxGeometry(2.15,.3,2.72),roverDark);lowerHull.position.y=.78;rover.add(lowerHull);
+ roverDeckMesh=new THREE.Mesh(new THREE.BoxGeometry(2.15,.13,2.5),roverGold);roverDeckMesh.position.set(0,1.48,0);rover.add(roverDeckMesh);
+ roverWheels=[];
+ for(const x of [-1.14,1.14])for(const z of [-1.02,0,1.02]){
+  const wPivot=new THREE.Group();wPivot.position.set(x,.62,z);
+  const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.49,.49,.34,24),roverRubber);wheel.rotation.z=Math.PI/2;wPivot.add(wheel);
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,.365,20),roverMetal);hub.rotation.z=Math.PI/2;wPivot.add(hub);
+  const hubCap=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,.38,16),roverGold);hubCap.rotation.z=Math.PI/2;wPivot.add(hubCap);
+  for(let t=0;t<10;t++){
+   const ang=t*Math.PI*2/10;
+   const tread=new THREE.Mesh(new THREE.BoxGeometry(.36,.09,.14),roverDark);
+   tread.position.set(0,Math.cos(ang)*.48,Math.sin(ang)*.48);tread.rotation.x=-ang;wPivot.add(tread);
+  }
+  rover.add(wPivot);roverWheels.push(wPivot);
+  const suspension=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.8,10),roverGold);suspension.rotation.z=Math.PI/2;suspension.position.set(x*.72,.9,z);rover.add(suspension);
+ }
+ const cabinBase=new THREE.Mesh(new THREE.BoxGeometry(1.35,.48,1.05),roverDark);cabinBase.position.set(0,1.83,-.35);rover.add(cabinBase);
+ const cabin=new THREE.Mesh(new THREE.BoxGeometry(1.2,.42,.9),roverGlass);cabin.position.set(0,2.22,-.35);rover.add(cabin);
+ roverRoofMesh=new THREE.Mesh(new THREE.BoxGeometry(1.55,.12,1.18),roverMetal);roverRoofMesh.position.set(0,2.49,-.35);rover.add(roverRoofMesh);
+ for(const side of [-1,1]){
+  const support=new THREE.Mesh(new THREE.BoxGeometry(.08,.55,.08),roverGold);support.position.set(side*.92,1.78,.85);rover.add(support);
+  const panel=new THREE.Mesh(new THREE.BoxGeometry(.92,.07,1.45),new THREE.MeshStandardMaterial({color:0x174a75,roughness:.22,metalness:.68,envMapIntensity:1.4}));
+  panel.position.set(side*1.38,2.03,.85);panel.rotation.z=side*.12;rover.add(panel);
+ }
+ const mast=new THREE.Mesh(new THREE.CylinderGeometry(.055,.075,.95,12),roverMetal);mast.position.set(0,2.95,-.9);rover.add(mast);
+ roverMastHead=new THREE.Group();roverMastHead.position.set(0,3.48,-.9);
+ const cameraHead=new THREE.Mesh(new THREE.BoxGeometry(.62,.34,.32),roverMetal);roverMastHead.add(cameraHead);
+ for(const side of [-1,1]){
+  const lens=new THREE.Mesh(new THREE.SphereGeometry(.105,16,12),new THREE.MeshStandardMaterial({color:0x5ce1ff,emissive:0x1b7fa3,emissiveIntensity:.7,roughness:.1,metalness:.85}));
+  lens.position.set(side*.2,0,-.175);roverMastHead.add(lens);
+ }
+ rover.add(roverMastHead);
+ const antenna=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.8,8),roverGold);antenna.position.set(.72,2.9,-.72);rover.add(antenna);
+ const antennaTip=new THREE.Mesh(new THREE.SphereGeometry(.07,12,10),new THREE.MeshBasicMaterial({color:0x53e2ff}));antennaTip.position.set(.72,3.32,-.72);rover.add(antennaTip);
+ const armBase=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.22,16),roverGold);armBase.position.set(0,1.7,1.52);rover.add(armBase);
+ const armUpper=new THREE.Mesh(new THREE.BoxGeometry(.16,.16,.85),roverMetal);armUpper.position.set(0,1.65,1.95);armUpper.rotation.x=-.25;rover.add(armUpper);
+ const armJoint=new THREE.Mesh(new THREE.SphereGeometry(.16,14,12),roverGold);armJoint.position.set(0,1.53,2.34);rover.add(armJoint);
+ const drill=new THREE.Mesh(new THREE.CylinderGeometry(.08,.045,.62,12),roverDark);drill.position.set(0,1.25,2.52);rover.add(drill);
+ const drillTip=new THREE.Mesh(new THREE.ConeGeometry(.11,.22,12),roverGold);drillTip.position.set(0,.91,2.52);rover.add(drillTip);
+ for(const side of [-1,1]){
+  const lamp=new THREE.Mesh(new THREE.SphereGeometry(.12,12,10),new THREE.MeshBasicMaterial({color:0xb8f4ff}));lamp.position.set(side*.78,1.18,1.56);rover.add(lamp);
+  const rearLamp=new THREE.Mesh(new THREE.SphereGeometry(.09,12,10),new THREE.MeshBasicMaterial({color:0xff5548}));rearLamp.position.set(side*.78,1.15,-1.56);rover.add(rearLamp);
+ }
+ addContactShadow(rover,2.2);
+ rover.scale.setScalar(1.45);
+ rover.position.set(3,terrainHeight(3,-4),-4);scene.add(rover);
+
+ astronaut=createAstronaut();astronaut.position.set(0,terrainHeight(0,2),2);scene.add(astronaut);
+
+ // Mining laser beam
+ const laserGeo=new THREE.CylinderGeometry(.035,.055,1,8);laserGeo.rotateX(Math.PI/2);laserGeo.translate(0,0,.5);
+ miningLaser=new THREE.Mesh(laserGeo,new THREE.MeshBasicMaterial({color:0x6beaff,transparent:true,opacity:.88,blending:THREE.AdditiveBlending}));
+ miningLaser.visible=false;scene.add(miningLaser);
+
+ exhaustPool=createParticlePool(48,0xffb35c,1.6);
+ sparkPool=createParticlePool(32,0x6beaff,.55);
+
+ currentPlanet.nodes.forEach(a=>makeDeposit(...a));
+ [[-12,-13],[15,-18],[-19,7],[7,22]].forEach(a=>createMineSite(a[0],a[1]));
+ setWeather(0,false);
+ window.addEventListener('resize',resize);updateCraftInventory();
+ scheduleFrame();
+}
+
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.render(scene,camera);}
+function updateCamera(dt=0){
+ if(autoOrbit)yaw+=dt*.42;
+ const target=driving?rover.position:astronaut.position;
+ const distance=driving?12.5:9.2;
+ const desiredPos=new THREE.Vector3(target.x+Math.sin(yaw)*distance,target.y+4.8+pitch*5,target.z+Math.cos(yaw)*distance);
+ const desiredLook=new THREE.Vector3(target.x,target.y+(driving?1.35:1.4),target.z);
+ const alpha=dt>0?1-Math.exp(-9*dt):1;
+ camPosSmooth.lerp(desiredPos,alpha);
+ camTargetSmooth.lerp(desiredLook,alpha);
+ camera.position.copy(camPosSmooth);
+ camera.lookAt(camTargetSmooth);
+}
+
+function afterDraw(cb){
+ if(isSoftwareGl){
+  const gl=renderer.getContext();
+  if(gl&&typeof gl.fenceSync==='function'){
+   const sync=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);
+   gl.flush();
+   const poll=()=>{
+    const st=sync?gl.getSyncParameter(sync,gl.SYNC_STATUS):gl.SIGNALED;
+    if(st===gl.UNSIGNALED)setTimeout(poll,5);
+    else{if(sync)gl.deleteSync(sync);setTimeout(cb,50);}
+   };
+   setTimeout(poll,5);return;
+  }
+  setTimeout(cb,50);return;
+ }
+ requestAnimationFrame(cb);
+}
+function scheduleFrame(){afterDraw(animate);}
+
+function animate(){
+ const rawDt=clock.getDelta();
+ const dt=Math.min(rawDt,.05);
+ const nowSec=performance.now()*.001;
+
+ updateParticlePool(exhaustPool,dt);
+ updateParticlePool(sparkPool,dt);
+
+ if(roverMastHead)roverMastHead.rotation.y=Math.sin(nowSec*.8)*.42;
+ bunkerRadars.forEach(r=>r.rotation.y+=dt*1.2);
+ if(beaconCrystal){beaconCrystal.rotation.y+=dt*1.6;beaconCrystal.position.y=3.35+Math.sin(nowSec*2.5)*.12;}
+ if(beaconRing){beaconRing.scale.setScalar(1+Math.sin(nowSec*3)*.12);}
+
+ if(landed&&!complete){
+  const weather=weatherTypes[weatherIndex];
+  const moveBase=driving?currentRover.speed:(keys.Shift?8*currentSuit.speedMult:4.5*currentSuit.speedMult);
+  const speed=moveBase*weather.speed;
+  let dx=0,dz=0;
+  if(keys.w||keys.ArrowUp){dx-=Math.sin(yaw)*speed*dt;dz-=Math.cos(yaw)*speed*dt;}
+  if(keys.s||keys.ArrowDown){dx+=Math.sin(yaw)*speed*dt;dz+=Math.cos(yaw)*speed*dt;}
+  if(keys.a||keys.ArrowLeft){dx-=Math.cos(yaw)*speed*dt;dz+=Math.sin(yaw)*speed*dt;}
+  if(keys.d||keys.ArrowRight){dx+=Math.cos(yaw)*speed*dt;dz-=Math.sin(yaw)*speed*dt;}
+
+  const moveMag=Math.hypot(dx,dz);
+  const mover=driving?rover:astronaut;
+  mover.position.x=THREE.MathUtils.clamp(mover.position.x+dx,-48,48);
+  mover.position.z=THREE.MathUtils.clamp(mover.position.z+dz,-48,48);
+  mover.position.y=terrainHeight(mover.position.x,mover.position.z);
+
+  if(moveMag>.001){
+   const targetAngle=Math.atan2(dx,dz);
+   let diff=targetAngle-mover.rotation.y;
+   while(diff>Math.PI)diff-=Math.PI*2;
+   while(diff<-Math.PI)diff+=Math.PI*2;
+   mover.rotation.y+=diff*Math.min(1,dt*12);
+   if(driving){
+    roverWheels.forEach(w=>w.rotation.x+=moveMag*1.8);
+    if(Math.random()<.45)spawnParticle(exhaustPool,new THREE.Vector3(rover.position.x+(Math.random()-.5)*1.4,rover.position.y+.25,rover.position.z+(Math.random()-.5)*1.4),new THREE.Vector3(-dx*2,1.1,-dz*2),.55,0x8a7d72);
+   }else{
+    walkPhase+=dt*11;
+    const swing=Math.sin(walkPhase)*.65;
+    if(leftArmPivot)leftArmPivot.rotation.x=swing;
+    if(rightArmPivot&&!keys.e)rightArmPivot.rotation.x=-swing;
+    if(leftLegPivot)leftLegPivot.rotation.x=-swing;
+    if(rightLegPivot)rightLegPivot.rotation.x=swing;
+   }
+  }else if(!driving){
+   const relax=Math.min(1,dt*10);
+   if(leftArmPivot)leftArmPivot.rotation.x*=1-relax;
+   if(rightArmPivot&&!keys.e)rightArmPivot.rotation.x*=1-relax;
+   if(leftLegPivot)leftLegPivot.rotation.x*=1-relax;
+   if(rightLegPivot)rightLegPivot.rotation.x*=1-relax;
+  }
+
+  if(driving){
+   astronaut.position.copy(rover.position);
+   roverBattery=Math.max(0,roverBattery-dt*.045*currentRover.drainMult*(weatherIndex===3?2:1));
+   if(weatherIndex===0&&currentRover.solarCharge>0)roverBattery=Math.min(100,roverBattery+dt*currentRover.solarCharge);
+   $('roverBattery').textContent=Math.ceil(roverBattery)+'%';
+   if(roverBattery<=0){driving=false;astronaut.visible=true;$('roverPanel').style.display='none';$('roverState').textContent='BATTERY EMPTY';say('Rover battery depleted! Use a Rover Repair Kit [F] to restore power.');}
+  }
+  const nearBunker=bunkers.some(b=>astronaut.position.distanceTo(b.position)<5.5);
+  const nearPad=astronaut.position.distanceTo(new THREE.Vector3(-3,0,-5))<5;
+  if(nearBunker){
+   oxygen=Math.min(100,oxygen+dt*4.5);
+   if(rover.position.distanceTo(astronaut.position)<7&&roverBattery<100){roverBattery=Math.min(100,roverBattery+dt*2);$('roverBattery').textContent=Math.ceil(roverBattery)+'%';}
+  }else{
+   oxygen=Math.max(0,oxygen-dt*.16*weather.oxygen*currentSuit.o2Mult*(driving?.35:1));
+  }
+  $('oxygenText').textContent=Math.ceil(oxygen)+'%';$('oxygenBar').style.width=oxygen+'%';
+  if(oxygen<25)$('oxygenBar').style.background='linear-gradient(90deg,#a92b35,#ff7c69)';
+  else $('oxygenBar').style.background='linear-gradient(90deg,#1689d0,#62f0ff)';
+  if(oxygen<=0){oxygen=0;$('prompt').textContent='Oxygen depleted! Press [Q] to refill oxygen or return to Landing Pad / Bunker.';}
+  updateCraftInventory();
+
+  let nearest=null,dist=999;
+  resources.forEach(r=>{
+   if(!r.userData.active)return;
+   r.rotation.y+=dt*.42;
+   const ring=r.getObjectByName('pulseRing');
+   if(ring)ring.scale.setScalar(.92+Math.sin(nowSec*3+r.position.x)*.1);
+   const d=astronaut.position.distanceTo(r.position);
+   if(d<dist){dist=d;nearest=r;}
+  });
+
+  const reach=driving?currentRover.mineReach:3.6;
+  let miningActive=false;
+  if(nearest&&dist<reach){
+   window.nearResource=nearest;
+   if(mineTarget!==nearest){mineTarget=nearest;mineHold=0;mineCompleted=false;}
+   if(keys.e&&!mineCompleted){
+    miningActive=true;
+    mineHold=Math.min(currentSuit.mineTime,mineHold+dt);
+    $('prompt').textContent='MINING '+nearest.userData.type.toUpperCase()+' · '+Math.floor(mineHold/currentSuit.mineTime*100)+'% — KEEP HOLDING E';
+    if(!driving&&rightArmPivot)rightArmPivot.rotation.x=-1.1;
+    const beamOrigin=new THREE.Vector3(mover.position.x,mover.position.y+(driving?1.75:1.35),mover.position.z);
+    const beamTarget=new THREE.Vector3(nearest.position.x,nearest.position.y+.65,nearest.position.z);
+    miningLaser.visible=true;
+    miningLaser.position.copy(beamOrigin);
+    miningLaser.lookAt(beamTarget);
+    miningLaser.scale.set(1,1,beamOrigin.distanceTo(beamTarget));
+    miningLaser.material.color.setHex(mats[nearest.userData.type]);
+    if(Math.random()<.55){
+     spawnParticle(sparkPool,beamTarget,new THREE.Vector3((Math.random()-.5)*3,1.5+Math.random()*2,(Math.random()-.5)*3),.45,mats[nearest.userData.type]);
+    }
+    if(mineHold>=currentSuit.mineTime){mineCompleted=true;collect();mineTarget=null;mineHold=0;}
+   }else if(!mineCompleted){
+    mineHold=0;
+    $('prompt').textContent='Hold E to mine '+nearest.userData.type.toUpperCase()+' deposit';
+   }
+  }else{
+   window.nearResource=null;mineTarget=null;mineHold=0;mineCompleted=false;
+   if(oxygen>0){
+    if(nearBunker)$('prompt').textContent='INSIDE BUNKER SAFE ZONE — Oxygen & Rover systems recharging.';
+    else $('prompt').textContent=driving?'Drive close to a deposit and hold E to mine.':'Explore '+currentPlanet.name+'. Hold E to mine · [Q] Refill O2 · [B] Build Bunker · [U] Upgrades.';
+   }
+  }
+  miningLaser.visible=miningActive;
+
+  if(nearPad&&oxygen<99){oxygen=Math.min(100,oxygen+dt*2.5);}
+  if(scanTime>0){scanTime-=dt;if(scanTime<=0)$('scanner').textContent='READY';}
+  weatherClock+=dt;if(weatherClock>55){weatherClock=0;const bias=currentPlanet.weatherBias;setWeather(bias[Math.floor(Math.random()*bias.length)],true);}
+  if(weatherParticles&&weatherIndex!==0){
+   const a=weatherParticles.geometry.attributes.position;
+   for(let i=0;i<a.count;i++){
+    a.array[i*3]+=(weatherIndex===1?.14:.04);
+    a.array[i*3+1]-=(weatherIndex===2?.11:.03);
+    if(a.array[i*3]>52)a.array[i*3]=-52;
+    if(a.array[i*3+1]<0)a.array[i*3+1]=29;
+   }
+   a.needsUpdate=true;
+  }
+  updateCamera(dt);
+ }else if(descending){
+  descentElapsed+=dt;
+  const padY=terrainHeight(-3,-5)+.24;
+  const t=Math.min(1,descentElapsed/3.6);
+  const eased=1-Math.pow(1-t,3);
+  rocket.position.y=THREE.MathUtils.lerp(18,padY,eased);
+  rocket.rotation.z=Math.sin(t*Math.PI)*.03;
+  const flame=rocket.getObjectByName('flame');
+  if(flame){flame.visible=t<.86;flame.scale.set(1,1+Math.sin(nowSec*40)*.15,1);}
+  if(t<.84){
+   spawnParticle(exhaustPool,new THREE.Vector3(-3+(Math.random()-.5)*1.1,rocket.position.y-.45,-5+(Math.random()-.5)*1.1),new THREE.Vector3((Math.random()-.5)*3,-2.8,(Math.random()-.5)*3),.32,0xffa84d);
+   if(t>.52)spawnParticle(exhaustPool,new THREE.Vector3(-3+(Math.random()-.5)*2.8,padY+.35,-5+(Math.random()-.5)*2.8),new THREE.Vector3((Math.random()-.5)*5,.6,(Math.random()-.5)*5),.45,0xa5b4c4);
+  }
+  camera.position.set(0,13.5,24);camera.lookAt(0,3,-5);
+  if(t>=1){
+   descending=false;landed=true;rocket.position.y=padY;rocket.rotation.z=0;
+   if(flame)flame.visible=false;
+   exhaustPool.forEach(p=>{p.life=0;p.sprite.visible=false;});
+   astronaut.position.set(-.7,terrainHeight(-.7,-.2),-.2);astronaut.visible=true;astronaut.rotation.y=Math.PI;
+   driving=false;yaw=0;pitch=-.12;updateCamera(0);updateCraftInventory();
+   $('phase').textContent='SURFACE';$('prompt').textContent='Touchdown complete. Commander Vega is ready. Hold E near deposits to mine.';
+   $('bottom').style.display='flex';say('TOUCHDOWN! Commander Vega is now on the surface. Begin exploration.');
+  }
+ }else if(!landed){
+  camera.position.set(0,13.5,24);camera.lookAt(0,3,-5);rocket.rotation.y+=dt*.18;
+ }else{
+  updateCamera(dt);
+ }
+ renderer.render(scene,camera);
+ scheduleFrame();
+}
+
+function collect(){
+ const r=window.nearResource;if(!landed||!r||!r.userData.active)return say('No resource deposit nearby. Move closer.');
+ const type=r.userData.type;
+ for(let i=0;i<14;i++)spawnParticle(sparkPool,new THREE.Vector3(r.position.x,r.position.y+.7,r.position.z),new THREE.Vector3((Math.random()-.5)*4.5,2+Math.random()*3,(Math.random()-.5)*4.5),.7,mats[type]);
+ r.userData.active=false;scene.remove(r);inv[type]++;$(type).textContent=inv[type]+' / '+needed[type];say('Collected '+type.toUpperCase()+'!');checkTasks();
+}
+function checkTasks(){
+ let done=0;
+ for(const k of ['ice','iron','silicon']){const ok=inv[k]>=needed[k];if(ok)done++;$('t'+({ice:1,iron:2,silicon:3}[k])).classList.toggle('done',ok);$('t'+({ice:1,iron:2,silicon:3}[k])).querySelector('.check').textContent=ok?'✓':'○';}
+ $('buildBtn').disabled=!landed||inv.beaconKits<1||complete;$('progress').textContent=(done+(complete?1:0))+' / 4 tasks';
+}
+
+function land(){
+ if(landed||descending)return;
+ descending=true;descentElapsed=0;rocket.position.y=18;
+ say('Landing sequence initiated. Brace for touchdown!');$('phase').textContent='DESCENT';$('landingControls').style.display='none';
+}
+
+function buildBeacon(){
+ if(!landed)return say('Land on the planet before deploying the beacon.');
+ if(inv.beaconKits<1)return say('Craft a Research Beacon Kit first.');
+ if(complete)return;
+ inv.beaconKits--;complete=true;$('craftModal').style.display='none';updateCraftInventory();
+ const beacon=new THREE.Group();
+ const base=new THREE.Mesh(new THREE.CylinderGeometry(.75,1.05,.55,16),mat(0x647c91,.35,.72,{bump:true}));base.position.y=.25;beacon.add(base);
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.09,.14,3.1,12),mat(0xdce8f2,.3,.78));pole.position.y=1.8;beacon.add(pole);
+ beaconCrystal=new THREE.Mesh(new THREE.OctahedronGeometry(.65),new THREE.MeshStandardMaterial({color:0x61edff,emissive:0x00bfff,emissiveIntensity:2.2,roughness:.12,metalness:.25}));
+ beaconCrystal.position.y=3.45;beacon.add(beaconCrystal);
+ beaconRing=new THREE.Mesh(new THREE.TorusGeometry(1.15,.045,10,40),new THREE.MeshBasicMaterial({color:0x61edff,transparent:true,opacity:.85}));
+ beaconRing.rotation.x=Math.PI/2;beaconRing.position.y=3.45;beacon.add(beaconRing);
+ const skyBeam=new THREE.Mesh(new THREE.CylinderGeometry(.12,.38,26,12),new THREE.MeshBasicMaterial({color:0x5ce3ff,transparent:true,opacity:.26,blending:THREE.AdditiveBlending,depthWrite:false}));
+ skyBeam.position.y=16;beacon.add(skyBeam);
+ const light=new THREE.PointLight(0x38ddff,32,26);light.position.y=3.3;beacon.add(light);
+ const bx=astronaut.position.x+2,bz=astronaut.position.z-2;
+ beacon.position.set(bx,terrainHeight(bx,bz),bz);scene.add(beacon);
+ $('t4').classList.add('done');$('t4').querySelector('.check').textContent='✓';checkTasks();
+ $('finalStats').textContent='Water ice, iron ore and silicon delivered on '+currentPlanet.name+'. Research Beacon constructed and powered.';
+ $('win').style.display='flex';say('Research Beacon online!');
+}
+
+function deployBunker(){
+ if(!landed)return say('Land on the planet before building a bunker.');
+ if(inv.bunkerKits<=0){$('craftMessage').textContent='No Habitation Bunker Kits in inventory.';return say('Craft a Habitation Bunker Kit first!');}
+ inv.bunkerKits--;
+ const b=new THREE.Group();
+ const hullMat=mat(0x526578,.38,.72,{bump:true}),trimMat=mat(0x233447,.5,.55),windowMat=new THREE.MeshStandardMaterial({color:0x6beaff,emissive:0x22c8ff,emissiveIntensity:1.6,roughness:.2});
+ const base=new THREE.Mesh(new THREE.CylinderGeometry(2.5,2.75,1.3,20),trimMat);base.position.y=.65;b.add(base);
+ const dome=new THREE.Mesh(new THREE.SphereGeometry(2.45,24,16,0,Math.PI*2,0,Math.PI/2),hullMat);dome.position.y=1.25;b.add(dome);
+ const airlock=new THREE.Mesh(new THREE.BoxGeometry(1.3,1.55,1.2),hullMat);airlock.position.set(0,.78,2.45);b.add(airlock);
+ const door=new THREE.Mesh(new THREE.BoxGeometry(.85,1.2,.1),windowMat);door.position.set(0,.72,3.06);b.add(door);
+ for(const a of [-.85,.85]){
+  const win=new THREE.Mesh(new THREE.BoxGeometry(.8,.32,.15),windowMat);
+  win.position.set(Math.sin(a)*2.35,1.55,Math.cos(a)*2.35);win.rotation.y=a;b.add(win);
+ }
+ const solar=new THREE.Mesh(new THREE.BoxGeometry(2.2,.08,1.1),new THREE.MeshStandardMaterial({color:0x164a78,roughness:.22,metalness:.75}));solar.position.set(0,3.8,0);solar.rotation.x=.22;b.add(solar);
+ const mast=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.7,8),trimMat);mast.position.set(0,3.55,0);b.add(mast);
+ const radar=new THREE.Group();radar.position.set(1.1,3.25,-.6);
+ const dish=new THREE.Mesh(new THREE.ConeGeometry(.42,.22,16,1,true),hullMat);dish.rotation.x=Math.PI*.35;radar.add(dish);
+ b.add(radar);bunkerRadars.push(radar);
+ const light=new THREE.PointLight(0x6beaff,12,16);light.position.set(0,2.2,0);b.add(light);
+ const ring=new THREE.Mesh(new THREE.RingGeometry(5.1,5.3,40),new THREE.MeshBasicMaterial({color:0x4ae3b5,side:THREE.DoubleSide,transparent:true,opacity:.48}));
+ ring.rotation.x=-Math.PI/2;ring.position.y=.12;b.add(ring);
+ const bx=astronaut.position.x+(driving?4.2:2.8),bz=astronaut.position.z+(driving?4.2:2.8);
+ b.position.set(bx,terrainHeight(bx,bz),bz);
+ scene.add(b);bunkers.push(b);
+ $('bunkerCountHud').textContent=bunkers.length;
+ $('craftModal').style.display='none';
+ updateCraftInventory();
+ $('craftMessage').textContent='Habitation Bunker constructed! Stand inside the green perimeter to recharge O2 & Rover.';
+ say('Habitation Bunker built! Safe zone active (+O2 & Rover recharge).');
+}
+
+function useOxygenCanister(){
+ if(!landed)return say('Land on the planet first.');
+ if(inv.oxygenKits<=0){$('craftMessage').textContent='No Oxygen Canisters in inventory. Craft one or stand near the Landing Pad / Bunker.';return say('No Oxygen Canisters! Craft one [C] or return to Landing Pad / Bunker.');}
+ if(oxygen>=99.9){$('craftMessage').textContent='Suit oxygen is already at 100%.';return say('Suit oxygen is already full.');}
+ inv.oxygenKits--;oxygen=Math.min(100,oxygen+35);
+ $('oxygenText').textContent=Math.ceil(oxygen)+'%';$('oxygenBar').style.width=oxygen+'%';
+ if(oxygen>=25)$('oxygenBar').style.background='linear-gradient(90deg,#1689d0,#62f0ff)';
+ updateCraftInventory();
+ $('craftMessage').textContent='Oxygen canister used! Suit oxygen refilled to '+Math.ceil(oxygen)+'%.';
+ say('Oxygen refilled (+35% O2). Reserve: '+Math.ceil(oxygen)+'%.');
+}
+
+function useRoverRepairKit(){
+ if(!landed)return say('Land on the planet first.');
+ if(inv.repairKits<=0){$('craftMessage').textContent='No Rover Repair Kits in inventory.';return say('No Rover Repair Kits available. Craft one first!');}
+ if(roverBattery>=99.9){$('craftMessage').textContent='Rover battery & systems are already at 100%.';return say('Rover battery is already at 100%.');}
+ inv.repairKits--;roverBattery=Math.min(100,roverBattery+50);
+ $('roverBattery').textContent=Math.ceil(roverBattery)+'%';
+ if(!driving)$('roverState').textContent='READY · PRESS R';
+ updateCraftInventory();
+ $('craftMessage').textContent='Rover repair kit applied! Battery restored to '+Math.ceil(roverBattery)+'%.';
+ say('Rover repair kit used (+50% Battery). Rover at '+Math.ceil(roverBattery)+'%.');
+}
+
+function updateCraftInventory(){
+ ['oxygenKits','repairKits','bunkerKits','beaconKits'].forEach(k=>$(k).textContent=inv[k]);
+ $('modalOxygenCount').textContent=inv.oxygenKits;$('modalRepairCount').textContent=inv.repairKits;
+ $('modalBunkerCount').textContent=inv.bunkerKits;$('modalBeaconCount').textContent=inv.beaconKits;
+ const canUseO2=landed&&inv.oxygenKits>0&&oxygen<99.9;
+ const canUseRepair=landed&&inv.repairKits>0&&roverBattery<99.9;
+ const canBuildBunker=landed&&inv.bunkerKits>0;
+ const canDeployBeacon=landed&&inv.beaconKits>0&&!complete;
+ $('useOxygenHud').disabled=!canUseO2;$('useOxygenModal').disabled=!canUseO2;
+ $('useRepairHud').disabled=!canUseRepair;$('useRepairModal').disabled=!canUseRepair;
+ $('useBunkerHud').disabled=!canBuildBunker;$('useBunkerModal').disabled=!canBuildBunker;
+ $('useBeaconHud').disabled=!canDeployBeacon;$('useBeaconModal').disabled=!canDeployBeacon;
+ $('buildBtn').disabled=!canDeployBeacon;
+}
+
+function craft(kind){
+ if(!landed)return say('Land on the planet before crafting.');
+ const cost={oxygen:{ice:1},repair:{iron:2,silicon:1},bunker:{ice:2,iron:3,silicon:2},beacon:{ice:3,iron:4,silicon:2}}[kind];
+ for(const k in cost){if(inv[k]<cost[k]){$('craftMessage').textContent='Insufficient materials for this blueprint.';return say('Not enough resources to craft this item.');}}
+ for(const k in cost){inv[k]-=cost[k];$(k).textContent=inv[k]+' / '+needed[k];}
+ if(kind==='oxygen')inv.oxygenKits++;if(kind==='repair')inv.repairKits++;if(kind==='bunker')inv.bunkerKits++;if(kind==='beacon')inv.beaconKits++;
+ updateCraftInventory();checkTasks();
+ const labels={oxygen:'Oxygen canister',repair:'Rover repair kit',bunker:'Habitation Bunker Kit',beacon:'Research Beacon Kit'};
+ $('craftMessage').textContent=labels[kind]+' successfully fabricated! Click REFILL/BUILD/DEPLOY to activate.';
+ say(labels[kind]+' crafted.');
+}
+
+function formatCost(cost){
+ const ks=Object.keys(cost);if(!ks.length)return 'FREE (STANDARD ISSUE)';
+ const names={ice:'❄ Water Ice',iron:'⬡ Iron Ore',silicon:'◇ Silicon'};
+ return ks.map(k=>cost[k]+' '+names[k]).join(' + ');
+}
+function hasResources(cost){return Object.keys(cost).every(k=>inv[k]>=cost[k]);}
+function spendResources(cost){for(const k in cost){inv[k]-=cost[k];$(k).textContent=inv[k]+' / '+needed[k];}checkTasks();}
+
+function applyPlanet(planet){
+ currentPlanet=planet;$('planetHeader').textContent=planet.name;
+ if(moonMesh)moonMesh.material.color.setHex(planet.moonColor);
+ if(moonGlow)moonGlow.material.color.setHex(planet.moonColor);
+ if(groundMesh){
+  const p=groundMesh.geometry.attributes.position,c=groundMesh.geometry.attributes.color;
+  for(let i=0;i<p.count;i++){
+   const x=p.getX(i),z=p.getZ(i),h=terrainHeight(x,z);
+   const shade=THREE.MathUtils.clamp(.78+h*.12+Math.sin(x*.28+z*.19)*.04,.58,.96);
+   c.setXYZ(i,planet.groundTint[0]*shade,planet.groundTint[1]*shade,planet.groundTint[2]*shade);
+  }
+  c.needsUpdate=true;
+ }
+ if(boulderInstanced){
+  const col=new THREE.Color();
+  for(let i=0;i<boulderInstanced.count;i++){
+   const s=.72+hash2D(i,4.3)*.4;
+   col.setRGB(planet.groundTint[0]*s,planet.groundTint[1]*s,planet.groundTint[2]*s);
+   boulderInstanced.setColorAt(i,col);
+  }
+  boulderInstanced.instanceColor.needsUpdate=true;
+ }
+ resources.forEach(r=>scene.remove(r));resources=[];
+ planet.nodes.forEach(a=>makeDeposit(...a));
+ setWeather(planet.weatherBias[0],false);
+}
+function applySuit(suit){
+ currentSuit=suit;$('hudSuitName').textContent=suit.name;
+ suitMeshes.forEach(m=>m.material.color.setHex(suit.suitColor));
+ if(visorMesh)visorMesh.material.color.setHex(suit.visorColor);
+ if(packMesh)packMesh.material.color.setHex(suit.packColor);
+}
+function applyRover(rv){
+ currentRover=rv;$('hudRoverName').textContent=rv.name;
+ if(roverHullMesh)roverHullMesh.material.color.setHex(rv.hullColor);
+ if(roverRoofMesh)roverRoofMesh.material.color.setHex(rv.hullColor);
+ if(roverDeckMesh)roverDeckMesh.material.color.setHex(rv.accentColor);
+}
+
+function renderUpgradeModal(){
+ $('tabPlanets').classList.toggle('active',activeUpgradeTab==='planets');
+ $('tabSuits').classList.toggle('active',activeUpgradeTab==='suits');
+ $('tabRovers').classList.toggle('active',activeUpgradeTab==='rovers');
+ const list=$('upgradeList');list.innerHTML='';
+ const catalog=activeUpgradeTab==='planets'?planetCatalog:(activeUpgradeTab==='suits'?suitCatalog:roverCatalog);
+ const activeItem=activeUpgradeTab==='planets'?currentPlanet:(activeUpgradeTab==='suits'?currentSuit:currentRover);
+ catalog.forEach(item=>{
+  const isEquipped=activeItem.id===item.id,canAfford=hasResources(item.cost);
+  const card=document.createElement('div');card.className='upgrade-card'+(isEquipped?' equipped':'');
+  const actionLabel=isEquipped?'ACTIVE':(item.unlocked?(activeUpgradeTab==='planets'?'TRAVEL':'EQUIP'):'UNLOCK');
+  card.innerHTML=`<div class="upgrade-meta">
+    <div><b>${item.name}</b> ${isEquipped?'<span class="active-badge">EQUIPPED</span>':(item.unlocked?'<span class="owned-badge">UNLOCKED</span>':'')}</div>
+    <div class="small">${item.subtitle}</div>
+    <div class="upgrade-perk">★ ${item.perk}</div>
+    <div class="upgrade-cost">${item.unlocked?'Status: Ready for deployment':'Unlock Cost: '+formatCost(item.cost)}</div>
+  </div>`;
+  const btn=document.createElement('button');btn.textContent=actionLabel;btn.disabled=isEquipped||(!item.unlocked&&!canAfford);
+  if(!isEquipped&&item.unlocked)btn.className='use-modal-btn';
+  btn.onclick=()=>{
+   if(!item.unlocked){
+    if(!hasResources(item.cost)){$('upgradeMessage').textContent='Insufficient mined resources to unlock '+item.name+'.';return;}
+    spendResources(item.cost);item.unlocked=true;
+   }
+   if(activeUpgradeTab==='planets'){applyPlanet(item);$('upgradeMessage').textContent='Arrived at '+item.name+'! Fresh mineral deposits located.';say('Expedition warped to '+item.name+'!');}
+   if(activeUpgradeTab==='suits'){applySuit(item);$('upgradeMessage').textContent='Equipped '+item.name+'. Suit systems calibrated.';say('Equipped '+item.name+'!');}
+   if(activeUpgradeTab==='rovers'){applyRover(item);$('upgradeMessage').textContent='Deployed '+item.name+'. Rover telemetry updated.';say('Switched to '+item.name+'!');}
+   renderUpgradeModal();
+  };
+  card.appendChild(btn);list.appendChild(card);
+ });
+}
+
+function scan(){
+ if(!landed)return say('Land first to scan the surface.');
+ if(inv.energy<=0)return say('No energy cells remaining.');
+ inv.energy--;$('energy').textContent=inv.energy;$('scanner').textContent='SCANNING';scanTime=5;
+ resources.forEach(r=>{if(r.userData.active){const m=r.children.find(x=>x.material&&x.material.emissive);if(m){m.material.emissiveIntensity=2.4;setTimeout(()=>{if(m.material)m.material.emissiveIntensity=.48;},4500);}}});
+ say('Scanner pulse: resource deposits highlighted.');
+}
+
+$('craftBtn').onclick=()=>{if(!landed)return say('Land first to use the fabrication bay.');updateCraftInventory();$('craftModal').style.display='flex';};
+$('closeCraft').onclick=()=>$('craftModal').style.display='none';
+$('upgradeBtn').onclick=()=>{if(!landed)return say('Land first to access Expedition & Armory Bay.');renderUpgradeModal();$('upgradeModal').style.display='flex';};
+$('closeUpgrade').onclick=()=>$('upgradeModal').style.display='none';
+$('tabPlanets').onclick=()=>{activeUpgradeTab='planets';renderUpgradeModal();};
+$('tabSuits').onclick=()=>{activeUpgradeTab='suits';renderUpgradeModal();};
+$('tabRovers').onclick=()=>{activeUpgradeTab='rovers';renderUpgradeModal();};
+$('craftOxygen').onclick=()=>craft('oxygen');
+$('craftRepair').onclick=()=>craft('repair');
+$('craftBunker').onclick=()=>craft('bunker');
+$('craftBeacon').onclick=()=>craft('beacon');
+$('useOxygenHud').onclick=useOxygenCanister;$('useOxygenModal').onclick=useOxygenCanister;
+$('useRepairHud').onclick=useRoverRepairKit;$('useRepairModal').onclick=useRoverRepairKit;
+$('useBunkerHud').onclick=deployBunker;$('useBunkerModal').onclick=deployBunker;
+$('useBeaconHud').onclick=buildBeacon;$('useBeaconModal').onclick=buildBeacon;
+$('viewBtn').onclick=()=>{autoOrbit=!autoOrbit;$('viewBtn').textContent='360° VIEW: '+(autoOrbit?'ON':'OFF');say(autoOrbit?'360-degree camera orbit enabled.':'Camera orbit paused. Drag to look around.');};
+$('startBtn').onclick=()=>{$('intro').style.display='none';$('landingControls').style.display='block';$('prompt').textContent='Press BEGIN LANDING to touch down on the planet.';};
+$('landBtn').onclick=land;$('scanBtn').onclick=scan;$('buildBtn').onclick=buildBeacon;
+window.addEventListener('keydown',e=>{
+ const k=e.key.toLowerCase();keys[k]=true;
+ if(k==='r'&&landed){
+  if(!driving&&astronaut.position.distanceTo(rover.position)<5&&roverBattery>0){driving=true;astronaut.visible=false;$('roverPanel').style.display='block';$('roverState').textContent='DRIVING';say('Rover control engaged. WASD to drive.');}
+  else if(driving){driving=false;astronaut.visible=true;astronaut.position.copy(rover.position);$('roverPanel').style.display='none';$('roverState').textContent='READY · PRESS R';say('Exited rover.');}
+  else if(roverBattery<=0)say('Rover battery is empty! Use a Rover Repair Kit [F] first.');
+  else say('Move closer to the rover to enter it.');
+ }
+ if(k==='c'&&landed){updateCraftInventory();$('craftModal').style.display='flex';}
+ if(k==='u'&&landed){renderUpgradeModal();$('upgradeModal').style.display='flex';}
+ if(k==='v')$('viewBtn').click();
+ if(k==='q'&&landed)useOxygenCanister();
+ if(k==='f'&&landed)useRoverRepairKit();
+ if(k==='b'&&landed)deployBunker();
+});
+window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;if(e.key.toLowerCase()==='e'){mineHold=0;if(!mineCompleted)mineTarget=null;}});
+const canvasEvents=()=>{
+ const el=$('game');
+ el.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;});
+ window.addEventListener('pointerup',()=>drag=false);
+ window.addEventListener('pointermove',e=>{if(!drag||!landed)return;yaw-=(e.clientX-px)*.005;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-py)*.003,-.5,.45);px=e.clientX;py=e.clientY;});
+};
+init();
+if(!isSoftwareGl)scene.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh){o.castShadow=true;o.receiveShadow=true;}});
+canvasEvents();
+})();
+</script></body></html>
